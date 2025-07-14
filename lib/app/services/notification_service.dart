@@ -1,8 +1,9 @@
+import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 
 class NotificationService {
-  static final ApiService _api = ApiService();
+  static final NotificationApiService _api = NotificationApiService();
 
   static Future<List<dynamic>?> getNotifications({
     bool? unreadOnly,

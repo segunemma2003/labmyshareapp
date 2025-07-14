@@ -221,7 +221,7 @@ class NotificationApiService extends NyApiService {
   Future<RequestHeaders> setAuthHeaders(RequestHeaders headers) async {
     String? token = await Keys.auth.read();
     if (token != null) {
-      headers.add("Authorization", "Token $token");
+      headers["Authorization"] = "Token $token";
     }
     return headers;
   }

@@ -1,10 +1,14 @@
+import 'package:flutter_app/app/networking/auth_api_service.dart';
+import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/user.dart';
 import '/config/keys.dart';
 
 class AuthService {
-  static final AuthService _api = AuthService();
+  static final AuthApiService _api = AuthApiService();
+  static final NotificationApiService _notificationApi =
+      NotificationApiService();
 
   static Future<bool> register({
     required String firstName,
@@ -106,12 +110,12 @@ class AuthService {
       print('Logout error: $e');
     } finally {
       // Clear local storage regardless of API response
-      await Keys.auth.delete();
-      await Keys.userProfile.delete();
-      await Keys.selectedServices.delete();
-      await Keys.selectedProfessional.delete();
-      await Keys.bookingDraft.delete();
-      await _api.clearUserSpecificCache();
+      await Keys.auth.flush();
+      await Keys.userProfile.flush();
+      await Keys.selectedServices.flush();
+      await Keys.selectedProfessional.flush();
+      await Keys.bookingDraft.flush();
+      await _notificationApi.clearUserSpecificCache();
     }
   }
 
@@ -196,8 +200,8 @@ class AuthService {
       if (response != null) {
         await Keys.currentRegion.save(regionCode);
         // Clear region-specific caches
-        await _api.clearServiceCache();
-        await _api.clearProfessionalsCache();
+        await _notificationApi.clearServiceCache();
+        await _notificationApi.clearProfessionalsCache();
         return true;
       }
       return false;

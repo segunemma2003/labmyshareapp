@@ -1,9 +1,10 @@
+import 'package:flutter_app/app/networking/paymments_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/config/keys.dart';
 
 class PaymentService {
-  static final ApiService _api = ApiService();
+  static final PaymmentsApiService _api = PaymmentsApiService();
 
   static Future<List<dynamic>?> getPayments({
     String? status,

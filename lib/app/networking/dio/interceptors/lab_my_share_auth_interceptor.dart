@@ -17,6 +17,7 @@ class LabMyShareAuthInterceptor extends Interceptor {
     handler.next(response);
   }
 
+  @override //
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401) {
       // Token expired or invalid, logout user

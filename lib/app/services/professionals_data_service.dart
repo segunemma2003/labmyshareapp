@@ -1,9 +1,10 @@
+import 'package:flutter_app/app/networking/professionals_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/professional.dart';
 
 class ProfessionalsDataService {
-  static final ApiService _api = ApiService();
+  static final ProfessionalsApiService _api = ProfessionalsApiService();
 
   static Future<List<Professional>?> getProfessionals({
     int? serviceId,

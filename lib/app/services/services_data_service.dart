@@ -1,10 +1,11 @@
+import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/service_item.dart';
 import '/app/models/add_on_service.dart';
 
 class ServicesDataService {
-  static final ApiService _api = ApiService();
+  static final ServicesApiService _api = ServicesApiService();
 
   static Future<List<dynamic>?> getServiceCategories() async {
     try {

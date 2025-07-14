@@ -51,9 +51,8 @@ class ApiErrorHandler {
     if (context != null) {
       showToastNotification(context,
           style: ToastNotificationStyleType.danger,
-          toastNotificationStyleMeta: (helper) => helper.onDanger()
-            ..title = "Error"
-            ..description = message);
+          title: "Error",
+          description: message);
     } else {
       print('API Error: $message');
     }

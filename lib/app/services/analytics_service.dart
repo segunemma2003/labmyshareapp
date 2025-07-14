@@ -1,8 +1,11 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_app/app/networking/notification_api_service.dart';
+import 'package:flutter_app/app/services/notification_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 
 class AnalyticsService {
-  static final ApiService _api = ApiService();
+  static final NotificationApiService _api = NotificationApiService();
 
   static Future<bool> trackEvent({
     required String eventType,

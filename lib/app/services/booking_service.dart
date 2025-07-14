@@ -1,9 +1,10 @@
+import 'package:flutter_app/app/networking/bookings_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/config/keys.dart';
 
 class BookingService {
-  static final ApiService _api = ApiService();
+  static final BookingsApiService _api = BookingsApiService();
 
   static Future<List<dynamic>?> getBookings({
     String? status,
@@ -64,7 +65,7 @@ class BookingService {
 
       // Clear booking draft after successful creation
       if (result != null) {
-        await Keys.bookingDraft.delete();
+        await Keys.bookingDraft.flush();
       }
 
       return result;
@@ -178,6 +179,6 @@ class BookingService {
   }
 
   static Future<void> clearBookingDraft() async {
-    await Keys.bookingDraft.delete();
+    await Keys.bookingDraft.flush();
   }
 }
