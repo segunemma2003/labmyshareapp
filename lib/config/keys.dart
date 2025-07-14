@@ -15,14 +15,21 @@ class Keys {
         return [
           auth,
           bearerToken,
+          currentRegion,
+          userProfile,
           // coins.defaultValue(10), // give the user 10 coins by default
         ];
       };
 
   static StorageKey auth = getEnv('SK_USER', defaultValue: 'SK_USER');
-
   static StorageKey bearerToken = 'SK_BEARER_TOKEN';
-
+  static StorageKey currentRegion = 'SK_CURRENT_REGION';
+  static StorageKey userProfile = 'SK_USER_PROFILE';
+  static StorageKey selectedServices = 'SK_SELECTED_SERVICES';
+  static StorageKey selectedProfessional = 'SK_SELECTED_PROFESSIONAL';
+  static StorageKey bookingDraft = 'SK_BOOKING_DRAFT';
+  static StorageKey paymentMethods = 'SK_PAYMENT_METHODS';
+  static StorageKey notificationPreferences = 'SK_NOTIFICATION_PREFERENCES';
   // static StorageKey coins = 'SK_COINS';
 
   /// Add your storage keys here...

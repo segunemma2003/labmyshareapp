@@ -1,3 +1,13 @@
+import '/app/models/notification.dart';
+import '/app/models/region.dart';
+import '/app/models/booking.dart';
+import '/app/networking/notification_api_service.dart';
+import '/app/networking/paymments_api_service.dart';
+import '/app/networking/bookings_api_service.dart';
+import '/app/networking/professionals_api_service.dart';
+import '/app/networking/services_api_service.dart';
+import '/app/networking/region_api_service.dart';
+import '/app/networking/auth_api_service.dart';
 import '/app/models/professional.dart';
 import '/app/models/add_on_service.dart';
 import '/app/models/service_item.dart';
@@ -23,17 +33,35 @@ final Map<Type, dynamic> modelDecoders = {
 
   // User: (data) => User.fromJson(data),
 
-  List<ServiceItem>: (data) => List.from(data).map((json) => ServiceItem.fromJson(json)).toList(),
+  List<ServiceItem>: (data) =>
+      List.from(data).map((json) => ServiceItem.fromJson(json)).toList(),
 
   ServiceItem: (data) => ServiceItem.fromJson(data),
 
-  List<AddOnService>: (data) => List.from(data).map((json) => AddOnService.fromJson(json)).toList(),
+  List<AddOnService>: (data) =>
+      List.from(data).map((json) => AddOnService.fromJson(json)).toList(),
 
   AddOnService: (data) => AddOnService.fromJson(data),
 
-  List<Professional>: (data) => List.from(data).map((json) => Professional.fromJson(json)).toList(),
+  List<Professional>: (data) =>
+      List.from(data).map((json) => Professional.fromJson(json)).toList(),
 
   Professional: (data) => Professional.fromJson(data),
+
+  List<Booking>: (data) =>
+      List.from(data).map((json) => Booking.fromJson(json)).toList(),
+
+  Booking: (data) => Booking.fromJson(data),
+
+  List<Region>: (data) =>
+      List.from(data).map((json) => Region.fromJson(json)).toList(),
+
+  Region: (data) => Region.fromJson(data),
+
+  List<NotificationModel>: (data) =>
+      List.from(data).map((json) => NotificationModel.fromJson(json)).toList(),
+
+  NotificationModel: (data) => NotificationModel.fromJson(data),
 };
 
 /* API Decoders
@@ -48,6 +76,20 @@ final Map<Type, dynamic> apiDecoders = {
   ApiService: () => ApiService(),
 
   // ...
+
+  AuthApiService: AuthApiService(),
+
+  RegionApiService: RegionApiService(),
+
+  ServicesApiService: ServicesApiService(),
+
+  ProfessionalsApiService: ProfessionalsApiService(),
+
+  BookingsApiService: BookingsApiService(),
+
+  PaymmentsApiService: PaymmentsApiService(),
+
+  NotificationApiService: NotificationApiService(),
 };
 
 /* Controller Decoders
