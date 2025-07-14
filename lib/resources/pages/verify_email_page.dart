@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/utils/api_error_handler.dart';
+import 'package:flutter_app/resources/pages/sign_in_page.dart';
+import 'package:flutter_app/resources/pages/select_region_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class VerifyEmailPage extends NyStatefulWidget {
@@ -11,10 +15,9 @@ class VerifyEmailPage extends NyStatefulWidget {
 
 class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   final List<TextEditingController> _controllers =
-      List.generate(4, (index) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(4, (index) => FocusNode());
+      List.generate(6, (index) => TextEditingController()); // 6 digits for OTP
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
 
-  bool _isLoading = false;
   bool _canResend = false;
   int _resendCountdown = 60;
   Timer? _timer;
@@ -22,15 +25,18 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
 
   @override
   get init => () {
-        // Timer will be started in didChangeDependencies
+        // Get email from route data
+        final data = widget.data();
+        if (data != null && data['email'] != null) {
+          _email = data['email'];
+        }
       };
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Get email from route arguments if passed
-    if (_email == null) {
-      _email = ModalRoute.of(context)?.settings.arguments as String?;
+    // Start timer on first load
+    if (_timer == null) {
       _startResendTimer();
     }
   }
@@ -50,15 +56,18 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   void _startResendTimer() {
     _canResend = false;
     _resendCountdown = 60;
+    _timer?.cancel();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_resendCountdown > 0) {
-          _resendCountdown--;
-        } else {
-          _canResend = true;
-          timer.cancel();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_resendCountdown > 0) {
+            _resendCountdown--;
+          } else {
+            _canResend = true;
+            timer.cancel();
+          }
+        });
+      }
     });
   }
 
@@ -94,8 +103,8 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
               // Subtitle
               Text(
                 _email != null
-                    ? "Please enter the code we just sent to $_email"
-                    : "Please enter the code we just sent your email",
+                    ? "Please enter the 6-digit code we just sent to $_email"
+                    : "Please enter the 6-digit code we just sent to your email",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -103,10 +112,10 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
               ),
               SizedBox(height: 48),
 
-              // OTP Input Fields
+              // OTP Input Fields (6 digits)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) => _buildOTPField(index)),
+                children: List.generate(6, (index) => _buildOTPField(index)),
               ),
               SizedBox(height: 32),
 
@@ -144,35 +153,41 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed:
-                      _isValidCode() && !_isLoading ? _handleVerify : null,
+                  onPressed: _isValidCode() ? _handleVerify : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         _isValidCode() ? Colors.black : Colors.grey[300],
+                    disabledBackgroundColor: Colors.grey[300],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: _isLoading
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(
-                          "Verify",
-                          style: TextStyle(
-                            color: _isValidCode()
-                                ? Colors.white
-                                : Colors.grey[600],
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  child: Text(
+                    "Verify",
+                    style: TextStyle(
+                      color: _isValidCode() ? Colors.white : Colors.grey[600],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // Skip for now (for development/testing)
+              Center(
+                child: TextButton(
+                  onPressed: () {
+                    // For development - skip verification
+                    _navigateToNextPage();
+                  },
+                  child: Text(
+                    "Skip for now (Dev only)",
+                    style: TextStyle(
+                      color: Colors.grey[500],
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
               ),
               SizedBox(height: 24),
@@ -185,7 +200,7 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
 
   Widget _buildOTPField(int index) {
     return Container(
-      width: 64,
+      width: 50,
       height: 64,
       decoration: BoxDecoration(
         border: Border.all(
@@ -222,11 +237,15 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
 
           if (value.isNotEmpty) {
             // Move to next field
-            if (index < 3) {
+            if (index < 5) {
               _focusNodes[index + 1].requestFocus();
             } else {
               // Hide keyboard when last field is filled
               _focusNodes[index].unfocus();
+              // Auto-verify when all fields are filled
+              if (_isValidCode()) {
+                _handleVerify();
+              }
             }
           } else {
             // Move to previous field when deleting
@@ -254,101 +273,99 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   Future<void> _handleVerify() async {
     if (!_isValidCode()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Use Nylo's built-in loading system
+    await lockRelease('verify_otp', perform: () async {
+      try {
+        // For now, we'll simulate verification since the API doesn't have an OTP verification endpoint
+        // In a real implementation, you would call an API endpoint like:
+        // bool isValid = await AuthService.verifyOTP(email: _email, otp: _getOTPCode());
 
-    try {
-      String otpCode = _getOTPCode();
+        String otpCode = _getOTPCode();
 
-      // TODO: Implement your OTP verification logic here
-      // Example:
-      // bool isValid = await Auth.verifyOTP(
-      //   email: _email,
-      //   code: otpCode,
-      // );
+        // Simulate API call
+        await Future.delayed(Duration(seconds: 1));
 
-      // Simulate API call
-      await Future.delayed(Duration(seconds: 2));
+        // For demo purposes, accept any 6-digit code
+        // In production, this would be validated by your backend
+        bool isValid = otpCode.length == 6;
 
-      // For demo purposes, let's say code is valid if it's "1234"
-      bool isValid = otpCode == "1234";
+        if (isValid) {
+          // Show success message
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description: "Email verified successfully!",
+          );
 
-      if (isValid) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Email verified successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate to next page (e.g., home or profile setup)
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        // Invalid code
-        _showError('Invalid verification code. Please try again.');
+          // Navigate to next page
+          _navigateToNextPage();
+        } else {
+          // Invalid code
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Invalid Code",
+            description: "Invalid verification code. Please try again.",
+          );
+          _clearFields();
+        }
+      } catch (e) {
+        // Handle error
+        ApiErrorHandler.handleError(e, context: context);
         _clearFields();
       }
-    } catch (e) {
-      // Handle error
-      _showError('Verification failed. Please try again.');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    });
   }
 
   Future<void> _handleResendCode() async {
-    if (!_canResend) return;
+    if (!_canResend || _email == null) return;
 
-    try {
-      // TODO: Implement resend OTP logic here
-      // Example:
-      // await Auth.resendOTP(email: _email);
+    // Use Nylo's built-in loading system
+    await lockRelease('resend_otp', perform: () async {
+      try {
+        // Since the API doesn't have a specific resend OTP endpoint,
+        // we would typically call the forgot password endpoint or similar
+        // For now, we'll simulate the resend
 
-      // Simulate API call
-      await Future.delayed(Duration(seconds: 1));
+        // Example of what you might call:
+        // await AuthService.forgotPassword(email: _email!);
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Verification code resent!',
-            style: TextStyle(color: Color(0xFFFFFFFF)), // Force white text
-          ),
-          backgroundColor: Color(0xFF4CAF50), // Force green
-        ),
-      );
+        // Simulate API call
+        await Future.delayed(Duration(seconds: 1));
 
-      // Restart timer
-      _startResendTimer();
+        // Show success message
+        showToastNotification(
+          context,
+          style: ToastNotificationStyleType.success,
+          title: "Code Sent",
+          description: "Verification code has been resent to your email.",
+        );
 
-      // Clear existing input
-      _clearFields();
-    } catch (e) {
-      _showError('Failed to resend code. Please try again.');
-    }
-  }
+        // Restart timer
+        _startResendTimer();
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(color: Color(0xFFFFFFFF)), // Force white text
-        ),
-        backgroundColor: Color(0xFFF44336), // Force red
-      ),
-    );
+        // Clear existing input
+        _clearFields();
+      } catch (e) {
+        ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 
   void _clearFields() {
     for (var controller in _controllers) {
       controller.clear();
     }
-    _focusNodes[0].requestFocus();
+    if (_focusNodes.isNotEmpty) {
+      _focusNodes[0].requestFocus();
+    }
     setState(() {});
+  }
+
+  void _navigateToNextPage() {
+    // After email verification, navigate to region selection
+    // since region selection happens after login/registration
+    routeTo(SelectRegionPage.path, removeUntilPredicate: (route) => false);
   }
 }

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/services/region_service.dart';
+import 'package:flutter_app/app/utils/api_error_handler.dart';
 import 'package:flutter_app/resources/pages/sign_in_page.dart';
 import 'package:flutter_app/resources/pages/verify_email_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -19,11 +22,13 @@ class _SignUpPageState extends NyPage<SignUpPage> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
+  // Remove manual loading state - using Nylo's built-in loading
+  int? _selectedRegionId;
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        // Set default region to UK (ID: 1) based on your API documentation
+        _selectedRegionId = 1;
       };
 
   @override
@@ -91,6 +96,9 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your first name';
                             }
+                            if (value.trim().length < 2) {
+                              return 'First name must be at least 2 characters';
+                            }
                             return null;
                           },
                         ),
@@ -104,6 +112,9 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your last name';
+                            }
+                            if (value.trim().length < 2) {
+                              return 'Last name must be at least 2 characters';
                             }
                             return null;
                           },
@@ -121,8 +132,8 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                               return 'Please enter your email';
                             }
                             if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                .hasMatch(value)) {
-                              return 'Please enter a valid email';
+                                .hasMatch(value.trim())) {
+                              return 'Please enter a valid email address';
                             }
                             return null;
                           },
@@ -152,8 +163,13 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter a password';
                             }
-                            if (value.length < 6) {
-                              return 'Password must be at least 6 characters';
+                            if (value.length < 8) {
+                              return 'Password must be at least 8 characters';
+                            }
+                            // Check for at least one letter and one number
+                            if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)')
+                                .hasMatch(value)) {
+                              return 'Password must contain at least one letter and one number';
                             }
                             return null;
                           },
@@ -201,31 +217,22 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignUp,
+                    onPressed: _handleSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
+                      disabledBackgroundColor: Colors.grey[400],
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: _isLoading
-                        ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                    child: Text(
+                      "Sign Up",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -241,7 +248,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                       ),
                       children: [
                         TextSpan(
-                            text: "By signing in, you are agreeing to our "),
+                            text: "By signing up, you are agreeing to our "),
                         TextSpan(
                           text: "Privacy Policy",
                           style: TextStyle(
@@ -372,47 +379,67 @@ class _SignUpPageState extends NyPage<SignUpPage> {
   }
 
   Future<void> _handleSignUp() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // TODO: Implement your sign-up logic here
-        // Example:
-        // await Auth.signUp(
-        //   firstName: _firstNameController.text,
-        //   lastName: _lastNameController.text,
-        //   email: _emailController.text,
-        //   password: _passwordController.text,
-        // );
-
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 2));
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate to success page or login
-        routeTo(VerifyEmailPage.path);
-      } catch (e) {
-        // Handle error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create account. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    // Use Nylo's built-in loading system
+    await lockRelease('signup', perform: () async {
+      try {
+        // Validate region selection
+        if (_selectedRegionId == null) {
+          throw Exception('Please select a region');
+        }
+
+        // Call the registration API
+        final success = await AuthService.register(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
+          currentRegion: _selectedRegionId!,
+        );
+
+        if (success) {
+          // Show success message
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description:
+                "Account created successfully! Please verify your email.",
+          );
+
+          // Navigate to verify email page with email data
+          routeTo(VerifyEmailPage.path, data: {
+            'email': _emailController.text.trim(),
+          });
+        } else {
+          // Handle registration failure
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Registration Failed",
+            description: "Failed to create account. Please try again.",
+          );
+        }
+      } catch (e) {
+        // Handle specific errors using your ApiErrorHandler
+        print('Registration error: $e');
+
+        // Show a generic error message
+        showToastNotification(
+          context,
+          style: ToastNotificationStyleType.danger,
+          title: "Error",
+          description:
+              "An error occurred during registration. Please try again.",
+        );
+
+        // You can also use ApiErrorHandler if you prefer:
+        // ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 }
