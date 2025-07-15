@@ -11,15 +11,10 @@ class ServicesDataService {
     try {
       final response = await _api.getServiceCategories();
       if (response != null) {
-        if (response is Map<String, dynamic> && response['results'] is List) {
-          return (response['results'] as List)
-              .map((item) => ServiceCategory.fromJson(item))
-              .toList();
-        } else if (response is List) {
-          return response
-              .map((item) => ServiceCategory.fromJson(item))
-              .toList();
-        }
+        return response
+            .map((item) =>
+                ServiceCategory.fromJson(item as Map<String, dynamic>))
+            .toList();
       }
       return [];
     } catch (e) {
