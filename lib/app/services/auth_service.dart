@@ -1,5 +1,6 @@
 import 'package:flutter_app/app/networking/auth_api_service.dart';
 import 'package:flutter_app/app/networking/notification_api_service.dart';
+import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/user.dart';
@@ -318,6 +319,8 @@ class AuthService {
         // Clear region-specific caches
         await _notificationApi.clearServiceCache();
         await _notificationApi.clearProfessionalsCache();
+        // Clear all services/add-ons cache
+        await ServicesApiService().clearCache();
         return true;
       }
       return false;

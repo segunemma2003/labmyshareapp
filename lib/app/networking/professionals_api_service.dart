@@ -48,12 +48,25 @@ class ProfessionalsApiService extends NyApiService {
 
     String cacheKey = "professionals_${queryParams.hashCode}";
 
-    return await network<List<Professional>>(
+    final response = await network(
       request: (request) =>
           request.get("/professionals/", queryParameters: queryParams),
       cacheKey: cacheKey,
       cacheDuration: const Duration(minutes: 30),
     );
+
+    // Handle Django REST framework response structure
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return (response['results'] as List)
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    if (response is List) {
+      return response
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return null;
   }
 
   Future<Professional?> getProfessional({required int id}) async {
@@ -80,18 +93,42 @@ class ProfessionalsApiService extends NyApiService {
     if (maxPrice != null) queryParams['max_price'] = maxPrice;
     if (verifiedOnly != null) queryParams['verified_only'] = verifiedOnly;
 
-    return await network<List<Professional>>(
+    final response = await network(
       request: (request) =>
           request.get("/professionals/search/", queryParameters: queryParams),
     );
+
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return (response['results'] as List)
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    if (response is List) {
+      return response
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return null;
   }
 
   Future<List<Professional>?> getTopRatedProfessionals() async {
-    return await network<List<Professional>>(
+    final response = await network(
       request: (request) => request.get("/professionals/top-rated/"),
       cacheKey: "top_rated_professionals",
       cacheDuration: const Duration(hours: 1),
     );
+
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return (response['results'] as List)
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    if (response is List) {
+      return response
+          .map((item) => Professional.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+    return null;
   }
 
   Future<List<dynamic>?> getAvailableSlots({

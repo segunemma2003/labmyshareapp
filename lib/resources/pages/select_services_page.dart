@@ -16,9 +16,9 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   List<ServiceCategory> _categories = [];
   List<Service> _services = [];
   List<Service> _selectedServices = [];
-  List<AddOn> _selectedAddOns = [];
-  List<AddOn> _categoryAddOns = [];
+  Map<int, List<AddOn>> _serviceAddOns = {};
   ServiceCategory? _selectedCategory;
+  List<AddOn> _categoryAddOns = [];
   bool _loadingCategories = true;
   bool _loadingServices = true;
   bool _errorCategories = false;
@@ -301,7 +301,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   Widget _buildBottomBar() {
     double totalPrice = _selectedServices.fold(
         0, (sum, service) => sum + (service.regionalPrice ?? 0));
-    totalPrice += _selectedAddOns.fold(
+    totalPrice += _serviceAddOns.values.expand((list) => list).fold(
         0, (sum, addon) => sum + (double.tryParse(addon.price ?? "0") ?? 0));
     String totalDuration = ""; // You can calculate total duration if needed
     return Container(
@@ -337,8 +337,12 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
           ),
           SizedBox(width: 16),
           ElevatedButton(
-            onPressed: () {
-              // Navigate to next step
+            onPressed: () async {
+              // Navigate to SelectProfessionalPage, passing selected services and add-ons
+              routeTo('/select-professional', data: {
+                'selectedServices': _selectedServices,
+                'serviceAddOns': _serviceAddOns,
+              });
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF000000),
@@ -368,7 +372,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
       ...(service.addons ?? [])
           .where((a) => !_categoryAddOns.any((c) => c.id == a.id)),
     ];
-
+    final initialSelectedAddOns = _serviceAddOns[service.id] ?? [];
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -376,12 +380,13 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
       builder: (context) => ServiceDetailsBottomSheet(
         service: service,
         availableAddOns: allAddOns,
+        initiallySelectedAddOns: initialSelectedAddOns,
         onAddToBooking: (service, selectedAddOns) {
           setState(() {
             if (!_selectedServices.any((s) => s.id == service.id)) {
               _selectedServices.add(service);
             }
-            _selectedAddOns.addAll(selectedAddOns);
+            _serviceAddOns[service.id] = selectedAddOns;
           });
         },
       ),

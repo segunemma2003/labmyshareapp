@@ -1,3 +1,4 @@
+import '/resources/pages/select_time_page.dart';
 import '/resources/pages/reset_password_o_t_p_page.dart';
 import '/resources/pages/forgot_password_page.dart';
 import '/resources/pages/welcome_screen_page.dart';
@@ -84,4 +85,5 @@ appRouter() => nyRoutes((router) {
       router.add(WelcomeScreenPage.path);
       router.add(ForgotPasswordPage.path);
       router.add(ResetPasswordOTPPage.path);
-    });
+      router.add(SelectTimePage.path);
+});

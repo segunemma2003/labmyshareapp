@@ -4,6 +4,7 @@ import 'package:flutter_app/app/models/service_item.dart';
 class ServiceDetailsBottomSheet extends StatefulWidget {
   final Service service;
   final List<AddOn> availableAddOns;
+  final List<AddOn> initiallySelectedAddOns;
   final Function(Service, List<AddOn>) onAddToBooking;
 
   const ServiceDetailsBottomSheet({
@@ -11,6 +12,7 @@ class ServiceDetailsBottomSheet extends StatefulWidget {
     required this.service,
     required this.availableAddOns,
     required this.onAddToBooking,
+    this.initiallySelectedAddOns = const [],
   }) : super(key: key);
 
   @override
@@ -19,14 +21,12 @@ class ServiceDetailsBottomSheet extends StatefulWidget {
 }
 
 class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
-  List<AddOn> _selectedAddOns = [];
+  late List<AddOn> _selectedAddOns;
 
   @override
   void initState() {
     super.initState();
-    // Pre-select recommended add-ons (if you have a way to mark them)
-    // For now, just leave empty or implement your own logic
-    _selectedAddOns = [];
+    _selectedAddOns = List<AddOn>.from(widget.initiallySelectedAddOns);
   }
 
   @override
@@ -138,9 +138,20 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                   SizedBox(height: 16),
 
                   // Add-on services
-                  ...widget.availableAddOns
-                      .map((addon) => _buildAddOnItem(addon))
-                      .toList(),
+                  ...widget.availableAddOns.asMap().entries.map((entry) {
+                    final idx = entry.key;
+                    final addon = entry.value;
+                    return Column(
+                      children: [
+                        _buildAddOnItem(addon),
+                        if (idx != widget.availableAddOns.length - 1) ...[
+                          SizedBox(height: 8),
+                          Divider(height: 1, color: Color(0xFFE0E0E0)),
+                          SizedBox(height: 8),
+                        ],
+                      ],
+                    );
+                  }).toList(),
                 ],
               ),
             ),
@@ -181,22 +192,26 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
 
   Widget _buildAddOnItem(AddOn addon) {
     final isSelected = _selectedAddOns.any((a) => a.id == addon.id);
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                if (isSelected) {
-                  _selectedAddOns.removeWhere((a) => a.id == addon.id);
-                } else {
-                  _selectedAddOns.add(addon);
-                }
-              });
-            },
-            child: Container(
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedAddOns.removeWhere((a) => a.id == addon.id);
+          } else {
+            _selectedAddOns.add(addon);
+          }
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Color(0xFFF5F5F5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
               width: 24,
               height: 24,
               decoration: BoxDecoration(
@@ -210,37 +225,46 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                   ? Icon(Icons.check, color: Color(0xFFFFFFFF), size: 16)
                   : null,
             ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  addon.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF000000),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    addon.name,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF000000),
+                    ),
                   ),
-                ),
-                Text(
-                  addon.durationMinutes != null && addon.price != null
-                      ? "${addon.durationMinutes} min • £${addon.price}"
-                      : addon.price != null
-                          ? "£${addon.price}"
-                          : addon.durationMinutes != null
-                              ? "${addon.durationMinutes} min"
-                              : "",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF666666),
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (addon.durationMinutes != null)
+                        Text(
+                          "${addon.durationMinutes} Minutes",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      if (addon.durationMinutes != null) SizedBox(width: 12),
+                      if (addon.price != null)
+                        Text(
+                          "£${addon.price}",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

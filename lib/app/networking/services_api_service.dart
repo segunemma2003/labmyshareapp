@@ -129,12 +129,29 @@ class ServicesApiService extends NyApiService {
   }
 
   Future<List<AddOn>?> getCategoryAddons({required int categoryId}) async {
-    return await network<List<AddOn>>(
+    final response = await network(
       request: (request) =>
           request.get("/services/categories/$categoryId/addons/"),
       cacheKey: "category_${categoryId}_addons",
       cacheDuration: const Duration(hours: 2),
     );
+
+    // Handle Django REST framework response structure
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return (response['results'] as List)
+          .map((item) => AddOn.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    // If it's already a list, return as is
+    if (response is List) {
+      return response
+          .map((item) => AddOn.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    // Fallback
+    return null;
   }
 
   Future<List<dynamic>?> getServiceReviews({required int serviceId}) async {
@@ -143,5 +160,21 @@ class ServicesApiService extends NyApiService {
       cacheKey: "service_${serviceId}_reviews",
       cacheDuration: const Duration(minutes: 15),
     );
+  }
+
+  Future<void> clearCache() async {
+    // Remove all region-dependent caches (services, add-ons, etc.)
+    final keys = [
+      'service_categories',
+      'featured_services',
+    ];
+    // Remove known keys
+    for (String key in keys) {
+      await NyStorage.delete(key);
+    }
+    // Remove dynamic category/services keys
+    // This will clear all keys that start with 'category_' or 'services_'
+    await NyStorage.clear('category_');
+    await NyStorage.clear('services_');
   }
 }
