@@ -103,12 +103,29 @@ class ServicesApiService extends NyApiService {
   }
 
   Future<List<Service>?> getCategoryServices({required int categoryId}) async {
-    return await network<List<Service>>(
+    final response = await network(
       request: (request) =>
           request.get("/services/categories/$categoryId/services/"),
       cacheKey: "category_${categoryId}_services",
       cacheDuration: const Duration(hours: 1),
     );
+
+    // Handle Django REST framework response structure
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return (response['results'] as List)
+          .map((item) => Service.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    // If it's already a list, return as is
+    if (response is List) {
+      return response
+          .map((item) => Service.fromJson(item as Map<String, dynamic>))
+          .toList();
+    }
+
+    // Fallback
+    return null;
   }
 
   Future<List<AddOn>?> getCategoryAddons({required int categoryId}) async {

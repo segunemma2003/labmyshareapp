@@ -17,6 +17,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   List<Service> _services = [];
   List<Service> _selectedServices = [];
   List<AddOn> _selectedAddOns = [];
+  List<AddOn> _categoryAddOns = [];
   ServiceCategory? _selectedCategory;
   bool _loadingCategories = true;
   bool _loadingServices = true;
@@ -42,6 +43,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
       });
       if (_selectedCategory != null) {
         await _loadServices(_selectedCategory!.id);
+        await _loadCategoryAddOns(_selectedCategory!.id);
       }
     } catch (e) {
       setState(() {
@@ -49,6 +51,14 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
         _errorCategories = true;
       });
     }
+  }
+
+  Future<void> _loadCategoryAddOns(int categoryId) async {
+    final addOns =
+        await ServicesDataService.getCategoryAddons(categoryId: categoryId);
+    setState(() {
+      _categoryAddOns = addOns ?? [];
+    });
   }
 
   Future<void> _loadServices(dynamic categoryId) async {
@@ -131,6 +141,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
                                   _selectedCategory = category;
                                 });
                                 await _loadServices(category.id);
+                                await _loadCategoryAddOns(category.id);
                               },
                               child: Container(
                                 margin: EdgeInsets.only(right: 16),
@@ -351,13 +362,20 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   }
 
   void _showServiceDetails(Service service) {
+    // Merge category add-ons and service add-ons, avoiding duplicates by id
+    final allAddOns = [
+      ..._categoryAddOns,
+      ...(service.addons ?? [])
+          .where((a) => !_categoryAddOns.any((c) => c.id == a.id)),
+    ];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ServiceDetailsBottomSheet(
         service: service,
-        availableAddOns: service.addons ?? [],
+        availableAddOns: allAddOns,
         onAddToBooking: (service, selectedAddOns) {
           setState(() {
             if (!_selectedServices.any((s) => s.id == service.id)) {

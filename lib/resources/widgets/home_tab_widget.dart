@@ -129,7 +129,6 @@ class _HomeTabState extends NyState<HomeTab> {
                                         value: region,
                                         child: Row(
                                           children: [
-                                            // Optionally add a flag or icon here
                                             Text(
                                               region.name ?? '',
                                               style: TextStyle(fontSize: 16),
@@ -144,6 +143,21 @@ class _HomeTabState extends NyState<HomeTab> {
                                 ),
                               ],
                             ),
+                  SizedBox(height: 16),
+                  // Banner Image
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'home_banner.jpg',
+                        width: double.infinity,
+                        height: 160,
+                        fit: BoxFit.cover,
+                      ).localAsset(),
+                    ),
+                  ),
                   SizedBox(height: 16),
                   Text(
                     "Services",
@@ -200,7 +214,11 @@ class _HomeTabState extends NyState<HomeTab> {
     final String? iconUrl = category.icon;
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to category details
+        // Use Nylo's routeTo to navigate and pass arguments
+        routeTo('/select-services', data: {
+          'categories': _categories,
+          'initialCategory': category,
+        });
       },
       child: Container(
         decoration: BoxDecoration(
