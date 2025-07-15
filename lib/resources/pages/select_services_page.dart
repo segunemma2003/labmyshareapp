@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/models/add_on_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
+import 'package:flutter_app/app/services/services_data_service.dart';
 import 'package:flutter_app/resources/widgets/service_details_bottom_sheet_widget.dart'
     show ServiceDetailsBottomSheet;
 import 'package:nylo_framework/nylo_framework.dart';
@@ -13,99 +13,66 @@ class SelectServicesPage extends NyStatefulWidget {
 }
 
 class _SelectServicesPageState extends NyPage<SelectServicesPage> {
-  String _selectedCategory = 'Braids';
-  List<ServiceItem> _selectedServices = [];
-  List<AddOnService> _selectedAddOns = [];
-
-  final List<String> _categories = [
-    'Braids',
-    'Cut & coloring',
-    'Scalp treatment',
-    'Wig services'
-  ];
-
-  final List<ServiceItem> _braidServices = [
-    ServiceItem(
-      title: 'Small knotless braids (waist length)',
-      duration: '8 hours 30 minutes',
-      price: 160,
-      instructions: [
-        'Please ensure your hair is washed and tangle free',
-        'Mid Back Length',
-        'Please bring 3 packs of Impressions or Xpressions Pre stretched hair.'
-      ],
-    ),
-    ServiceItem(
-      title: 'Medium knotless braids (waist length)',
-      duration: '8 hours',
-      price: 150,
-    ),
-    ServiceItem(
-      title: 'Fulani knotless braids (waist length)',
-      duration: '7 Hours 30 minutes',
-      price: 130,
-    ),
-    ServiceItem(
-      title: 'Freestyle Fulani braids (waist length)',
-      duration: '8 hours',
-      price: 140,
-    ),
-    ServiceItem(
-      title: 'Large knotless braids (waist length)',
-      duration: '6 hours',
-      price: 10,
-    ),
-    ServiceItem(
-      title: 'Knotless Braids (Children)',
-      duration: '4 hours',
-      price: 80,
-    ),
-  ];
-
-  final List<AddOnService> _availableAddOns = [
-    AddOnService(
-      title: '9am premium slot charge',
-      duration: '10 Minutes',
-      price: 20,
-      type: AddOnType.optional,
-    ),
-    AddOnService(
-      title: 'Blow dry (standard comb attachment blow dry)',
-      duration: '1 Hour',
-      price: 20,
-      type: AddOnType.optional,
-    ),
-    AddOnService(
-      title: 'Deep Cleanse Hair Detox',
-      duration: '1 Hours',
-      price: 60,
-      type: AddOnType.recommended,
-    ),
-    AddOnService(
-      title: 'Knotless braids take down',
-      duration: '10 Minutes',
-      price: 20,
-      priceType: 'From',
-      type: AddOnType.recommended,
-    ),
-    AddOnService(
-      title: 'Premium slot',
-      duration: '10 Minutes',
-      price: 20,
-      type: AddOnType.optional,
-    ),
-    AddOnService(
-      title: 'Take down (cornrows/Braids)',
-      duration: '45 Minutes',
-      price: 20,
-      type: AddOnType.optional,
-    ),
-  ];
+  List<ServiceCategory> _categories = [];
+  List<Service> _services = [];
+  List<Service> _selectedServices = [];
+  List<AddOn> _selectedAddOns = [];
+  ServiceCategory? _selectedCategory;
+  bool _loadingCategories = true;
+  bool _loadingServices = true;
+  bool _errorCategories = false;
+  bool _errorServices = false;
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        await _loadCategories();
       };
+
+  Future<void> _loadCategories() async {
+    setState(() {
+      _loadingCategories = true;
+      _errorCategories = false;
+    });
+    try {
+      final categories = await ServicesDataService.getServiceCategories();
+      setState(() {
+        _categories = categories;
+        _selectedCategory = categories.isNotEmpty ? categories.first : null;
+        _loadingCategories = false;
+      });
+      if (_selectedCategory != null) {
+        await _loadServices(_selectedCategory!.id);
+      }
+    } catch (e) {
+      setState(() {
+        _loadingCategories = false;
+        _errorCategories = true;
+      });
+    }
+  }
+
+  Future<void> _loadServices(dynamic categoryId) async {
+    setState(() {
+      _loadingServices = true;
+      _errorServices = false;
+    });
+    try {
+      // Ensure categoryId is always int
+      final int intCategoryId =
+          categoryId is int ? categoryId : int.parse(categoryId.toString());
+      final services = await ServicesDataService.getCategoryServices(
+          categoryId: intCategoryId);
+      setState(() {
+        _services = services ?? [];
+        _loadingServices = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loadingServices = false;
+        _errorServices = true;
+      });
+    }
+  }
 
   @override
   Widget view(BuildContext context) {
@@ -142,96 +109,103 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
         body: Column(
           children: [
             // Category Tabs
-            Container(
-              height: 50,
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final category = _categories[index];
-                  final isSelected = _selectedCategory == category;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                    },
-                    child: Container(
-                      margin: EdgeInsets.only(right: 16),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected ? Color(0xFF000000) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? Color(0xFF000000)
-                              : Color(0xFFE0E0E0),
+            _loadingCategories
+                ? SizedBox(
+                    height: 50,
+                    child: Center(child: CircularProgressIndicator()))
+                : _errorCategories
+                    ? Center(child: Text('Failed to load categories'))
+                    : Container(
+                        height: 50,
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _categories.length,
+                          itemBuilder: (context, index) {
+                            final category = _categories[index];
+                            final isSelected =
+                                _selectedCategory?.id == category.id;
+                            return GestureDetector(
+                              onTap: () async {
+                                setState(() {
+                                  _selectedCategory = category;
+                                });
+                                await _loadServices(category.id);
+                              },
+                              child: Container(
+                                margin: EdgeInsets.only(right: 16),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Color(0xFF000000)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Color(0xFF000000)
+                                        : Color(0xFFE0E0E0),
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    category.name,
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? Color(0xFFFFFFFF)
+                                          : Color(0xFF666666),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                      child: Center(
-                        child: Text(
-                          category,
-                          style: TextStyle(
-                            color: isSelected
-                                ? Color(0xFFFFFFFF)
-                                : Color(0xFF666666),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
             SizedBox(height: 16),
-
             // Services Content
             Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Category Title and Description
-                    Text(
-                      _selectedCategory,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF000000),
-                      ),
-                    ),
-                    SizedBox(height: 8),
-
-                    if (_selectedCategory == 'Braids')
-                      Text(
-                        "From classic styles to intricate designs, we offer a range of braid services tailored to suit your taste and occasion. Whether you're looking for box braids, cornrows, twists, or any trending style.",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF666666),
-                          height: 1.5,
+              child: _loadingServices
+                  ? Center(child: CircularProgressIndicator())
+                  : _errorServices
+                      ? Center(child: Text('Failed to load services'))
+                      : SingleChildScrollView(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (_selectedCategory != null) ...[
+                                Text(
+                                  _selectedCategory!.name,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF000000),
+                                  ),
+                                ),
+                                if (_selectedCategory!.description != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0),
+                                    child: Text(
+                                      _selectedCategory!.description!,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF666666),
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                              SizedBox(height: 24),
+                              ..._services
+                                  .map((service) => _buildServiceItem(service))
+                                  .toList(),
+                              SizedBox(height: 100), // Space for bottom bar
+                            ],
+                          ),
                         ),
-                      ),
-
-                    SizedBox(height: 24),
-
-                    // Services List
-                    if (_selectedCategory == 'Braids')
-                      ..._braidServices
-                          .map((service) => _buildServiceItem(service))
-                          .toList(),
-
-                    SizedBox(height: 100), // Space for bottom bar
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -241,9 +215,8 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
     );
   }
 
-  Widget _buildServiceItem(ServiceItem service) {
-    final isSelected = _selectedServices.any((s) => s.title == service.title);
-
+  Widget _buildServiceItem(Service service) {
+    final isSelected = _selectedServices.any((s) => s.id == service.id);
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
@@ -259,7 +232,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  service.title,
+                  service.name,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -268,7 +241,9 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  service.duration,
+                  service.durationMinutes != null
+                      ? "${service.durationMinutes} min"
+                      : "",
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF666666),
@@ -276,7 +251,9 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  "From £${service.price}",
+                  service.regionalPrice != null
+                      ? "From £${service.regionalPrice!.toStringAsFixed(2)}"
+                      : "",
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -311,13 +288,11 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   }
 
   Widget _buildBottomBar() {
-    double totalPrice =
-        _selectedServices.fold(0, (sum, service) => sum + service.price);
-    totalPrice += _selectedAddOns.fold(0, (sum, addon) => sum + addon.price);
-
-    String totalDuration =
-        "8 Hours 30 mins - 9 Hours"; // Calculate actual duration
-
+    double totalPrice = _selectedServices.fold(
+        0, (sum, service) => sum + (service.regionalPrice ?? 0));
+    totalPrice += _selectedAddOns.fold(
+        0, (sum, addon) => sum + (double.tryParse(addon.price ?? "0") ?? 0));
+    String totalDuration = ""; // You can calculate total duration if needed
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -332,7 +307,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "£${totalPrice.toInt()}",
+                  "£${totalPrice.toStringAsFixed(2)}",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -375,17 +350,17 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
     );
   }
 
-  void _showServiceDetails(ServiceItem service) {
+  void _showServiceDetails(Service service) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ServiceDetailsBottomSheet(
         service: service,
-        availableAddOns: _availableAddOns,
+        availableAddOns: service.addons ?? [],
         onAddToBooking: (service, selectedAddOns) {
           setState(() {
-            if (!_selectedServices.any((s) => s.title == service.title)) {
+            if (!_selectedServices.any((s) => s.id == service.id)) {
               _selectedServices.add(service);
             }
             _selectedAddOns.addAll(selectedAddOns);

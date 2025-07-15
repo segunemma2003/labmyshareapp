@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/models/add_on_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
 
 class ServiceDetailsBottomSheet extends StatefulWidget {
-  final ServiceItem service;
-  final List<AddOnService> availableAddOns;
-  final Function(ServiceItem, List<AddOnService>) onAddToBooking;
+  final Service service;
+  final List<AddOn> availableAddOns;
+  final Function(Service, List<AddOn>) onAddToBooking;
 
   const ServiceDetailsBottomSheet({
     Key? key,
@@ -20,15 +19,14 @@ class ServiceDetailsBottomSheet extends StatefulWidget {
 }
 
 class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
-  List<AddOnService> _selectedAddOns = [];
+  List<AddOn> _selectedAddOns = [];
 
   @override
   void initState() {
     super.initState();
-    // Pre-select recommended add-ons
-    _selectedAddOns = widget.availableAddOns
-        .where((addon) => addon.type == AddOnType.recommended)
-        .toList();
+    // Pre-select recommended add-ons (if you have a way to mark them)
+    // For now, just leave empty or implement your own logic
+    _selectedAddOns = [];
   }
 
   @override
@@ -79,7 +77,7 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                 children: [
                   // Service Title
                   Text(
-                    widget.service.title,
+                    widget.service.name,
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -90,7 +88,9 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
 
                   // Duration and Price
                   Text(
-                    widget.service.duration,
+                    widget.service.durationMinutes != null
+                        ? "${widget.service.durationMinutes} min"
+                        : "",
                     style: TextStyle(
                       fontSize: 14,
                       color: Color(0xFF666666),
@@ -98,7 +98,9 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                   ),
                   SizedBox(height: 4),
                   Text(
-                    "From £${widget.service.price}",
+                    widget.service.regionalPrice != null
+                        ? "From £${widget.service.regionalPrice!.toStringAsFixed(2)}"
+                        : "",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -108,21 +110,19 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
 
                   SizedBox(height: 24),
 
-                  // Instructions
-                  if (widget.service.instructions != null &&
-                      widget.service.instructions!.isNotEmpty)
-                    ...widget.service.instructions!
-                        .map((instruction) => Padding(
-                              padding: EdgeInsets.only(bottom: 8),
-                              child: Text(
-                                instruction,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Color(0xFF666666),
-                                ),
-                              ),
-                            ))
-                        .toList(),
+                  // Description
+                  if (widget.service.description != null &&
+                      widget.service.description!.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        widget.service.description!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF666666),
+                        ),
+                      ),
+                    ),
 
                   SizedBox(height: 32),
 
@@ -179,8 +179,8 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
     );
   }
 
-  Widget _buildAddOnItem(AddOnService addon) {
-    final isSelected = _selectedAddOns.any((a) => a.title == addon.title);
+  Widget _buildAddOnItem(AddOn addon) {
+    final isSelected = _selectedAddOns.any((a) => a.id == addon.id);
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -190,7 +190,7 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
             onTap: () {
               setState(() {
                 if (isSelected) {
-                  _selectedAddOns.removeWhere((a) => a.title == addon.title);
+                  _selectedAddOns.removeWhere((a) => a.id == addon.id);
                 } else {
                   _selectedAddOns.add(addon);
                 }
@@ -200,15 +200,9 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? (addon.type == AddOnType.recommended
-                        ? Color(0xFF8B4513)
-                        : Color(0xFF000000))
-                    : Colors.transparent,
+                color: isSelected ? Color(0xFF8B4513) : Colors.transparent,
                 border: Border.all(
-                  color: addon.type == AddOnType.recommended
-                      ? Color(0xFF8B4513)
-                      : Color(0xFFE0E0E0),
+                  color: Color(0xFF8B4513),
                 ),
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -223,7 +217,7 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  addon.title,
+                  addon.name,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -231,7 +225,13 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                   ),
                 ),
                 Text(
-                  "${addon.duration} • ${addon.priceType ?? 'From'} £${addon.price}",
+                  addon.durationMinutes != null && addon.price != null
+                      ? "${addon.durationMinutes} min • £${addon.price}"
+                      : addon.price != null
+                          ? "£${addon.price}"
+                          : addon.durationMinutes != null
+                              ? "${addon.durationMinutes} min"
+                              : "",
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF666666),

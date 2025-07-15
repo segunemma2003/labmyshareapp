@@ -239,7 +239,7 @@ class ServiceCategory extends Model {
 
   factory ServiceCategory.fromJson(Map<String, dynamic> json) {
     return ServiceCategory(
-      id: json['id'] ?? 0,
+      id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
       name: json['name'] ?? '',
       description: json['description'],
       icon: json['icon'],

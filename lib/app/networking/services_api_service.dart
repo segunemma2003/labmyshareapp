@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/models/add_on_service.dart' show AddOnService;
 import 'package:flutter_app/app/models/service_item.dart';
 import 'package:flutter_app/app/networking/dio/interceptors/lab_my_share_auth_interceptor.dart';
 import 'package:flutter_app/app/networking/dio/interceptors/region_interceptor.dart';
@@ -39,7 +38,7 @@ class ServicesApiService extends NyApiService {
     );
   }
 
-  Future<List<ServiceItem>?> getServices({
+  Future<List<Service>?> getServices({
     int? categoryId,
     bool? isFeatured,
     String? search,
@@ -51,9 +50,9 @@ class ServicesApiService extends NyApiService {
     if (search != null) queryParams['search'] = search;
     if (ordering != null) queryParams['ordering'] = ordering;
 
-    String cacheKey = "services_${queryParams.hashCode}";
+    String cacheKey = "services_ {queryParams.hashCode}";
 
-    return await network<List<ServiceItem>>(
+    return await network<List<Service>>(
       request: (request) =>
           request.get("/services/", queryParameters: queryParams),
       cacheKey: cacheKey,
@@ -61,38 +60,37 @@ class ServicesApiService extends NyApiService {
     );
   }
 
-  Future<ServiceItem?> getService({required int id}) async {
-    return await network<ServiceItem>(
+  Future<Service?> getService({required int id}) async {
+    return await network<Service>(
       request: (request) => request.get("/services/$id/"),
       cacheKey: "service_$id",
       cacheDuration: const Duration(hours: 1),
     );
   }
 
-  Future<List<ServiceItem>?> getFeaturedServices() async {
-    return await network<List<ServiceItem>>(
+  Future<List<Service>?> getFeaturedServices() async {
+    return await network<List<Service>>(
       request: (request) => request.get("/services/featured/"),
       cacheKey: "featured_services",
       cacheDuration: const Duration(minutes: 30),
     );
   }
 
-  Future<List<ServiceItem>?> searchServices({
+  Future<List<Service>?> searchServices({
     required String query,
     int? categoryId,
   }) async {
     Map<String, dynamic> queryParams = {"q": query};
     if (categoryId != null) queryParams['category'] = categoryId;
 
-    return await network<List<ServiceItem>>(
+    return await network<List<Service>>(
       request: (request) =>
           request.get("/services/search/", queryParameters: queryParams),
     );
   }
 
-  Future<List<ServiceItem>?> getCategoryServices(
-      {required int categoryId}) async {
-    return await network<List<ServiceItem>>(
+  Future<List<Service>?> getCategoryServices({required int categoryId}) async {
+    return await network<List<Service>>(
       request: (request) =>
           request.get("/services/categories/$categoryId/services/"),
       cacheKey: "category_${categoryId}_services",
@@ -100,9 +98,8 @@ class ServicesApiService extends NyApiService {
     );
   }
 
-  Future<List<AddOnService>?> getCategoryAddons(
-      {required int categoryId}) async {
-    return await network<List<AddOnService>>(
+  Future<List<AddOn>?> getCategoryAddons({required int categoryId}) async {
+    return await network<List<AddOn>>(
       request: (request) =>
           request.get("/services/categories/$categoryId/addons/"),
       cacheKey: "category_${categoryId}_addons",

@@ -33,15 +33,15 @@ final Map<Type, dynamic> modelDecoders = {
 
   // User: (data) => User.fromJson(data),
 
-  List<ServiceItem>: (data) =>
-      List.from(data).map((json) => ServiceItem.fromJson(json)).toList(),
+  List<Service>: (data) =>
+      List.from(data).map((json) => Service.fromJson(json)).toList(),
 
-  ServiceItem: (data) => ServiceItem.fromJson(data),
+  Service: (data) => Service.fromJson(data),
 
-  List<AddOnService>: (data) =>
-      List.from(data).map((json) => AddOnService.fromJson(json)).toList(),
+  List<AddOn>: (data) =>
+      List.from(data).map((json) => AddOn.fromJson(json)).toList(),
 
-  AddOnService: (data) => AddOnService.fromJson(data),
+  AddOn: (data) => AddOn.fromJson(data),
 
   List<Professional>: (data) =>
       List.from(data).map((json) => Professional.fromJson(json)).toList(),

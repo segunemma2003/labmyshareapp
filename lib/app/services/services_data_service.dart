@@ -2,8 +2,7 @@ import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/service_item.dart';
-import '/app/models/service_item.dart' show ServiceCategory;
-import '/app/models/add_on_service.dart';
+import '/app/models/service_item.dart' show ServiceCategory, AddOn;
 
 class ServicesDataService {
   static final ServicesApiService _api = ServicesApiService();
@@ -11,12 +10,16 @@ class ServicesDataService {
   static Future<List<ServiceCategory>> getServiceCategories() async {
     try {
       final response = await _api.getServiceCategories();
-      if (response != null &&
-          response is Map<String, dynamic> &&
-          response['results'] is List) {
-        return (response['results'] as List)
-            .map((item) => ServiceCategory.fromJson(item))
-            .toList();
+      if (response != null) {
+        if (response is Map<String, dynamic> && response['results'] is List) {
+          return (response['results'] as List)
+              .map((item) => ServiceCategory.fromJson(item))
+              .toList();
+        } else if (response is List) {
+          return response
+              .map((item) => ServiceCategory.fromJson(item))
+              .toList();
+        }
       }
       return [];
     } catch (e) {
@@ -25,7 +28,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<ServiceItem>?> getServices({
+  static Future<List<Service>?> getServices({
     int? categoryId,
     bool? isFeatured,
     String? search,
@@ -44,7 +47,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<ServiceItem?> getService({required int id}) async {
+  static Future<Service?> getService({required int id}) async {
     try {
       return await _api.getService(id: id);
     } catch (e) {
@@ -53,7 +56,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<ServiceItem>?> getFeaturedServices() async {
+  static Future<List<Service>?> getFeaturedServices() async {
     try {
       return await _api.getFeaturedServices();
     } catch (e) {
@@ -62,7 +65,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<ServiceItem>?> searchServices({
+  static Future<List<Service>?> searchServices({
     required String query,
     int? categoryId,
   }) async {
@@ -74,7 +77,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<ServiceItem>?> getCategoryServices(
+  static Future<List<Service>?> getCategoryServices(
       {required int categoryId}) async {
     try {
       return await _api.getCategoryServices(categoryId: categoryId);
@@ -84,7 +87,7 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<AddOnService>?> getCategoryAddons(
+  static Future<List<AddOn>?> getCategoryAddons(
       {required int categoryId}) async {
     try {
       return await _api.getCategoryAddons(categoryId: categoryId);
