@@ -10,14 +10,12 @@ class AuthService {
   static final NotificationApiService _notificationApi =
       NotificationApiService();
 
-  static Future<bool> register({
-    required String firstName,
-    required String lastName,
-    required String email,
-    required String password,
-    required String confirmPassword,
-    required int currentRegion,
-  }) async {
+  static Future<bool> register(
+      {required String firstName,
+      required String lastName,
+      required String email,
+      required String password,
+      required String confirmPassword}) async {
     try {
       final response = await _api.register(
         firstName: firstName,
@@ -25,7 +23,6 @@ class AuthService {
         email: email,
         password: password,
         confirmPassword: confirmPassword,
-        currentRegion: currentRegion,
       );
 
       if (response != null && response['token'] != null) {
@@ -52,7 +49,6 @@ class AuthService {
       final response = await _api.login(
         email: email,
         password: password,
-        regionCode: regionCode,
       );
 
       if (response != null && response['token'] != null) {
@@ -85,7 +81,6 @@ class AuthService {
       final response = await _api.socialAuth(
         firebaseToken: firebaseToken,
         provider: provider,
-        currentRegion: currentRegion,
       );
 
       if (response != null && response['token'] != null) {

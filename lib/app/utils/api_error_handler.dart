@@ -8,7 +8,24 @@ class ApiErrorHandler {
     if (error is DioException) {
       switch (error.response?.statusCode) {
         case 400:
-          message = 'Invalid request. Please check your input.';
+          // Check if it's a validation error with details
+          if (error.response?.data != null &&
+              error.response?.data is Map &&
+              error.response?.data['details'] != null) {
+            final details =
+                error.response?.data['details'] as Map<String, dynamic>;
+            final firstError = details.values.first;
+            if (firstError is List && firstError.isNotEmpty) {
+              message = firstError.first.toString();
+            } else {
+              message = firstError.toString();
+            }
+          } else if (error.response?.data != null &&
+              error.response?.data['error'] != null) {
+            message = error.response!.data['error'].toString();
+          } else {
+            message = 'Invalid request. Please check your input.';
+          }
           break;
         case 401:
           message = 'Authentication failed. Please login again.';
@@ -45,7 +62,7 @@ class ApiErrorHandler {
               error.response?.data?['message'] ?? 'Network error occurred';
       }
     } else if (error is Exception) {
-      message = error.toString();
+      message = error.toString().replaceFirst('Exception: ', '');
     }
 
     if (context != null) {

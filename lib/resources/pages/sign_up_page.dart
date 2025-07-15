@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
-import 'package:flutter_app/app/services/region_service.dart';
 import 'package:flutter_app/app/utils/api_error_handler.dart';
 import 'package:flutter_app/resources/pages/sign_in_page.dart';
 import 'package:flutter_app/resources/pages/verify_email_page.dart';
@@ -22,14 +21,6 @@ class _SignUpPageState extends NyPage<SignUpPage> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  // Remove manual loading state - using Nylo's built-in loading
-  int? _selectedRegionId;
-
-  @override
-  get init => () async {
-        // Set default region to UK (ID: 1) based on your API documentation
-        _selectedRegionId = 1;
-      };
 
   @override
   void dispose() {
@@ -217,7 +208,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _handleSignUp,
+                    onPressed: isLocked('signup') ? null : _handleSignUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       disabledBackgroundColor: Colors.grey[400],
@@ -225,14 +216,23 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: isLocked('signup')
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -292,7 +292,6 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                         WidgetSpan(
                           child: GestureDetector(
                             onTap: () {
-                              // Navigate to sign in page
                               routeTo(SignInPage.path);
                             },
                             child: Text(
@@ -383,26 +382,17 @@ class _SignUpPageState extends NyPage<SignUpPage> {
       return;
     }
 
-    // Use Nylo's built-in loading system
     await lockRelease('signup', perform: () async {
       try {
-        // Validate region selection
-        if (_selectedRegionId == null) {
-          throw Exception('Please select a region');
-        }
-
-        // Call the registration API
         final success = await AuthService.register(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
           password: _passwordController.text,
           confirmPassword: _confirmPasswordController.text,
-          currentRegion: _selectedRegionId!,
         );
 
         if (success) {
-          // Show success message
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
@@ -416,7 +406,6 @@ class _SignUpPageState extends NyPage<SignUpPage> {
             'email': _emailController.text.trim(),
           });
         } else {
-          // Handle registration failure
           showToastNotification(
             context,
             style: ToastNotificationStyleType.danger,
@@ -425,20 +414,8 @@ class _SignUpPageState extends NyPage<SignUpPage> {
           );
         }
       } catch (e) {
-        // Handle specific errors using your ApiErrorHandler
-        print('Registration error: $e');
-
-        // Show a generic error message
-        showToastNotification(
-          context,
-          style: ToastNotificationStyleType.danger,
-          title: "Error",
-          description:
-              "An error occurred during registration. Please try again.",
-        );
-
-        // You can also use ApiErrorHandler if you prefer:
-        // ApiErrorHandler.handleError(e, context: context);
+        // Handle specific API errors
+        ApiErrorHandler.handleError(e, context: context);
       }
     });
   }

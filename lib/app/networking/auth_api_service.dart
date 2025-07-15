@@ -36,7 +36,6 @@ class AuthApiService extends NyApiService {
     required String email,
     required String password,
     required String confirmPassword,
-    required int currentRegion,
   }) async {
     return await network(
       request: (request) => request.post("/auth/register/", data: {
@@ -45,7 +44,6 @@ class AuthApiService extends NyApiService {
         "email": email,
         "password": password,
         "confirm_password": confirmPassword,
-        "current_region": currentRegion,
       }),
     );
   }
@@ -53,13 +51,11 @@ class AuthApiService extends NyApiService {
   Future<Map<String, dynamic>?> login({
     required String email,
     required String password,
-    required String regionCode,
   }) async {
     return await network(
       request: (request) => request.post("/auth/login/", data: {
         "email": email,
         "password": password,
-        "region_code": regionCode,
       }),
     );
   }
@@ -67,13 +63,11 @@ class AuthApiService extends NyApiService {
   Future<Map<String, dynamic>?> socialAuth({
     required String firebaseToken,
     required String provider,
-    required int currentRegion,
   }) async {
     return await network(
       request: (request) => request.post("/auth/social-auth/", data: {
         "firebase_token": firebaseToken,
         "provider": provider,
-        "current_region": currentRegion,
       }),
     );
   }
