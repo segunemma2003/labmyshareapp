@@ -1,25 +1,31 @@
-import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:flutter_app/app/networking/region_api_service.dart';
-import 'package:nylo_framework/nylo_framework.dart';
-import '/app/networking/api_service.dart';
-import '/app/models/region.dart';
-import '/config/keys.dart';
+import 'package:flutter_app/app/models/region.dart';
 
 class RegionService {
   static final RegionApiService _api = RegionApiService();
-  static final NotificationApiService _notificationApi =
-      NotificationApiService();
 
   static Future<List<Region>?> getRegions() async {
     try {
+      print('RegionService: Fetching regions...'); // Debug log
       final response = await _api.getRegions();
-      if (response != null) {
-        // The API returns a list directly, not wrapped in a 'results' key
-        return (response as List).map((data) => Region.fromJson(data)).toList();
+      print('RegionService: API response: $response'); // Debug log
+      print(
+          'RegionService: Response type: ${response.runtimeType}'); // Debug log
+
+      if (response != null && response is List) {
+        final regions = response
+            .map((json) => Region.fromJson(json as Map<String, dynamic>))
+            .toList();
+        print('RegionService: Parsed ${regions.length} regions'); // Debug log
+        return regions;
       }
-      return null;
+
+      print(
+          'RegionService: No regions returned from API or wrong format'); // Debug log
+      return [];
     } catch (e) {
-      print('Get regions error: $e');
+      print('RegionService.getRegions error: $e');
+      print('RegionService.getRegions stack trace: ${StackTrace.current}');
       return null;
     }
   }
@@ -32,33 +38,8 @@ class RegionService {
       }
       return null;
     } catch (e) {
-      print('Get region error: $e');
+      print('RegionService.getRegion error: $e');
       return null;
-    }
-  }
-
-  static Future<String?> getCurrentRegionCode() async {
-    return await Keys.currentRegion.read();
-  }
-
-  static Future<Region?> getCurrentRegion() async {
-    final regionCode = await getCurrentRegionCode();
-    if (regionCode != null) {
-      return await getRegion(code: regionCode);
-    }
-    return null;
-  }
-
-  static Future<bool> setCurrentRegion(String regionCode) async {
-    try {
-      await Keys.currentRegion.save(regionCode);
-      // Clear region-specific caches
-      await _notificationApi.clearServiceCache();
-      await _notificationApi.clearProfessionalsCache();
-      return true;
-    } catch (e) {
-      print('Set current region error: $e');
-      return false;
     }
   }
 }

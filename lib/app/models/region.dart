@@ -1,53 +1,49 @@
-import 'package:nylo_framework/nylo_framework.dart';
+class Region {
+  final int? id;
+  final String? code;
+  final String? name;
+  final String? description;
+  final bool? isActive;
+  final String? createdAt;
+  final String? updatedAt;
 
-class Region extends Model {
-  static StorageKey key = "region";
+  Region({
+    this.id,
+    this.code,
+    this.name,
+    this.description,
+    this.isActive,
+    this.createdAt,
+    this.updatedAt,
+  });
 
-  int? id;
-  String? code;
-  String? name;
-  String? currency;
-  String? currencySymbol;
-  String? timezone;
-  String? countryCode;
-  String? businessStartTime;
-  String? businessEndTime;
-  String? supportEmail;
-  String? supportPhone;
-  bool? isActive;
-
-  Region() : super(key: key);
-
-  Region.fromJson(data) : super(key: key) {
-    id = data['id'];
-    code = data['code'];
-    name = data['name'];
-    currency = data['currency'];
-    currencySymbol = data['currency_symbol'];
-    timezone = data['timezone'];
-    countryCode = data['country_code'];
-    businessStartTime = data['business_start_time'];
-    businessEndTime = data['business_end_time'];
-    supportEmail = data['support_email'];
-    supportPhone = data['support_phone'];
-    isActive = data['is_active'];
+  factory Region.fromJson(Map<String, dynamic> json) {
+    try {
+      return Region(
+        id: json['id'],
+        code: json['code']?.toString(),
+        name: json['name']?.toString(),
+        description: json['description']?.toString(),
+        isActive: json['is_active'] ?? true,
+        createdAt: json['created_at']?.toString(),
+        updatedAt: json['updated_at']?.toString(),
+      );
+    } catch (e) {
+      print('Region.fromJson error: $e');
+      print('Problematic JSON: $json');
+      rethrow;
+    }
   }
 
-  @override
-  toJson() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'code': code,
       'name': name,
-      'currency': currency,
-      'currency_symbol': currencySymbol,
-      'timezone': timezone,
-      'country_code': countryCode,
-      'business_start_time': businessStartTime,
-      'business_end_time': businessEndTime,
-      'support_email': supportEmail,
-      'support_phone': supportPhone,
+      'description': description,
       'is_active': isActive,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 }

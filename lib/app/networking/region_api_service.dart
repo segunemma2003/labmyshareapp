@@ -30,11 +30,24 @@ class RegionApiService extends NyApiService {
       };
 
   Future<List<dynamic>?> getRegions() async {
-    return await network(
+    final response = await network(
       request: (request) => request.get("/regions/"),
-      cacheKey: "regions_list",
-      cacheDuration: const Duration(hours: 24), // Cache regions for 24 hours
+      // cacheKey: "regions_list",
+      // cacheDuration: const Duration(seconds: 10), // Cache regions for 24 hours
     );
+
+    // Handle Django REST framework response structure
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return response['results'] as List<dynamic>?;
+    }
+
+    // If it's already a list, return as is
+    if (response is List) {
+      return response;
+    }
+
+    // Fallback
+    return null;
   }
 
   Future<Map<String, dynamic>?> getRegion({required String code}) async {

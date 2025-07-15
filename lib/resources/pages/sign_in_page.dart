@@ -374,7 +374,7 @@ class _SignInPageState extends NyPage<SignInPage> {
           // Check if user is verified
           final user = await AuthService.getCurrentUser();
 
-          if (user != null && !user.isVerified!) {
+          if (user != null && !(user.isVerified ?? false)) {
             // User needs to verify email
             showToastNotification(
               context,
@@ -386,7 +386,6 @@ class _SignInPageState extends NyPage<SignInPage> {
           }
 
           // Check if user needs to select region
-          final needsRegion = await AuthService.needsRegionSelection();
 
           showToastNotification(
             context,
@@ -395,19 +394,11 @@ class _SignInPageState extends NyPage<SignInPage> {
             description: "Signed in successfully!",
           );
 
-          if (needsRegion) {
-            // Navigate to region selection
-            routeTo(
-              SelectRegionPage.path,
-              removeUntilPredicate: (route) => false,
-            );
-          } else {
-            // Navigate to main app
-            routeTo(
-              BaseNavigationHub.path,
-              removeUntilPredicate: (route) => false,
-            );
-          }
+          routeTo(
+            SelectRegionPage.path,
+            navigationType: NavigationType.pushAndRemoveUntil,
+            removeUntilPredicate: (route) => false,
+          );
         } else {
           showToastNotification(
             context,
@@ -417,6 +408,7 @@ class _SignInPageState extends NyPage<SignInPage> {
           );
         }
       } catch (e) {
+        print('SignIn error: $e'); // Add more detailed logging
         ApiErrorHandler.handleError(e, context: context);
       }
     });

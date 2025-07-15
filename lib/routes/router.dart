@@ -83,5 +83,5 @@ appRouter() => nyRoutes((router) {
       router.add(LegalPage.path);
       router.add(WelcomeScreenPage.path);
       router.add(ForgotPasswordPage.path);
-  router.add(ResetPasswordOTPPage.path);
-});
+      router.add(ResetPasswordOTPPage.path);
+    });

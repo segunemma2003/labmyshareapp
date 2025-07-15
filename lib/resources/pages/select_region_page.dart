@@ -21,6 +21,7 @@ class _SelectRegionPageState extends NyPage<SelectRegionPage> {
   @override
   get init => () async {
         // Load regions on initialization
+        await _loadRegions();
       };
 
   Future<void> _loadRegions() async {
@@ -29,6 +30,11 @@ class _SelectRegionPageState extends NyPage<SelectRegionPage> {
       if (regions != null) {
         setState(() {
           _availableRegions = regions;
+          _isLoadingRegions = false;
+        });
+      } else {
+        // Handle the case where regions is null
+        setState(() {
           _isLoadingRegions = false;
         });
       }

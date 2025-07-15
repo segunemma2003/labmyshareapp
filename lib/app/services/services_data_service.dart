@@ -2,17 +2,26 @@ import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/service_item.dart';
+import '/app/models/service_item.dart' show ServiceCategory;
 import '/app/models/add_on_service.dart';
 
 class ServicesDataService {
   static final ServicesApiService _api = ServicesApiService();
 
-  static Future<List<dynamic>?> getServiceCategories() async {
+  static Future<List<ServiceCategory>> getServiceCategories() async {
     try {
-      return await _api.getServiceCategories();
+      final response = await _api.getServiceCategories();
+      if (response != null &&
+          response is Map<String, dynamic> &&
+          response['results'] is List) {
+        return (response['results'] as List)
+            .map((item) => ServiceCategory.fromJson(item))
+            .toList();
+      }
+      return [];
     } catch (e) {
       print('Get service categories error: $e');
-      return null;
+      return [];
     }
   }
 

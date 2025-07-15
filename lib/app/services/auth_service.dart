@@ -95,13 +95,28 @@ class AuthService {
       if (response != null && response['token'] != null) {
         await Keys.auth.save(response['token']);
         if (response['user'] != null) {
-          User user = User.fromJson(response['user']);
-          await Keys.userProfile.save(user.toJson());
+          try {
+            // Clean the user data before parsing
+            final userData = Map<String, dynamic>.from(response['user']);
 
-          // Save current region
-          if (response['user']['current_region'] != null) {
-            await Keys.currentRegion
-                .save(response['user']['current_region']['code']);
+            // Handle empty gender
+            if (userData['gender'] == '') {
+              userData['gender'] = null;
+            }
+
+            print('Cleaned user data: $userData'); // Debug log
+
+            User user = User.fromJson(userData);
+            await Keys.userProfile.save(user.toJson());
+
+            // Save current region
+            if (userData['current_region'] != null) {
+              await Keys.currentRegion.save(userData['current_region']['code']);
+            }
+          } catch (parseError) {
+            print('User parsing error: $parseError');
+            // Still save the token even if user parsing fails
+            return true;
           }
         }
         return true;
@@ -173,11 +188,24 @@ class AuthService {
     try {
       final userData = await Keys.userProfile.read();
       if (userData != null) {
-        return User.fromJson(userData);
+        print('Raw user data: $userData'); // Debug log
+
+        // Add null checks for problematic fields
+        if (userData is Map<String, dynamic>) {
+          // Handle empty string gender
+          if (userData['gender'] == '') {
+            userData['gender'] = null;
+          }
+
+          // Handle any other potential string index issues
+          print('Parsing user data...');
+          return User.fromJson(userData);
+        }
       }
       return null;
     } catch (e) {
-      print('Get current user error: $e');
+      print('Get current user error details: $e');
+      print('Stack trace: ${StackTrace.current}');
       return null;
     }
   }

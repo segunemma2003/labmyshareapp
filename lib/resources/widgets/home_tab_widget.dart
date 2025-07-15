@@ -1,42 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/services/region_service.dart';
+import 'package:flutter_app/app/services/services_data_service.dart';
+import 'package:flutter_app/app/models/service_item.dart' show ServiceCategory;
+import 'package:flutter_app/app/models/region.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
-class HomeTab extends StatefulWidget {
-  const HomeTab({super.key});
+class HomeTab extends NyStatefulWidget {
+  HomeTab({super.key});
 
   @override
   createState() => _HomeTabState();
 }
 
 class _HomeTabState extends NyState<HomeTab> {
-  PageController _pageController = PageController();
-  int _currentSlide = 0;
-
-  // Sample slider images - replace with your actual images
-  final List<String> _sliderImages = [
-    'home_banner.jpg',
-    'home_banner.jpg',
-  ];
-
-  // Categories data
-  final List<CategoryItem> _categories = [
-    CategoryItem(title: 'Braids', image: 'category1.jpg'),
-    CategoryItem(title: 'Cut and Coloring', image: 'category2.png'),
-    CategoryItem(title: 'Scalp Treatment', image: 'category3.png'),
-    CategoryItem(title: 'Wig Service', image: 'category4.jpg'),
-    CategoryItem(title: 'Hair Smoothing', image: 'category5.png'),
-    CategoryItem(title: 'Clip ins & Treatments', image: 'category6.png'),
-  ];
+  Region? _selectedRegion;
+  List<Region> _regions = [];
+  List<ServiceCategory> _categories = [];
+  bool _loadingRegions = true;
+  bool _loadingCategories = true;
+  bool _errorRegions = false;
+  bool _errorCategories = false;
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        await _loadRegionsAndUser();
       };
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  Future<void> _loadRegionsAndUser() async {
+    setState(() {
+      _loadingRegions = true;
+      _errorRegions = false;
+    });
+    try {
+      final user = await AuthService.getCurrentUser();
+      final regions = await RegionService.getRegions();
+      Region? currentRegion = user?.currentRegion;
+      if (regions != null && regions.isNotEmpty) {
+        setState(() {
+          _regions = regions;
+          _selectedRegion = currentRegion ?? regions.first;
+          _loadingRegions = false;
+        });
+        await _loadCategories();
+      } else {
+        setState(() {
+          _loadingRegions = false;
+          _errorRegions = true;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _loadingRegions = false;
+        _errorRegions = true;
+      });
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    setState(() {
+      _loadingCategories = true;
+      _errorCategories = false;
+    });
+    try {
+      final categories = await ServicesDataService.getServiceCategories();
+      setState(() {
+        _categories = categories;
+        _loadingCategories = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loadingCategories = false;
+        _errorCategories = true;
+      });
+    }
+  }
+
+  Future<void> _onRegionChanged(Region? region) async {
+    if (region == null || region.code == _selectedRegion?.code) return;
+    setState(() {
+      _selectedRegion = region;
+      _loadingCategories = true;
+    });
+    // Switch region in backend and update local storage
+    await AuthService.switchRegion(regionCode: region.code!);
+    await _loadCategories();
   }
 
   @override
@@ -45,254 +93,101 @@ class _HomeTabState extends NyState<HomeTab> {
       backgroundColor: Color(0xFFFFFFFF),
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section
-            Container(
-              padding: EdgeInsets.all(16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Greeting
+                  // Region Dropdown
+                  _loadingRegions
+                      ? const SizedBox(
+                          height: 40,
+                          child: Center(child: CircularProgressIndicator()))
+                      : _errorRegions
+                          ? Row(
+                              children: [
+                                Icon(Icons.error, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Failed to load regions'),
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                Icon(Icons.location_city,
+                                    color: Colors.brown, size: 20),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: DropdownButton<Region>(
+                                    isExpanded: true,
+                                    value: _selectedRegion,
+                                    icon: Icon(Icons.keyboard_arrow_down),
+                                    underline: SizedBox(),
+                                    items: _regions.map((region) {
+                                      return DropdownMenuItem<Region>(
+                                        value: region,
+                                        child: Row(
+                                          children: [
+                                            // Optionally add a flag or icon here
+                                            Text(
+                                              region.name ?? '',
+                                              style: TextStyle(fontSize: 16),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (region) =>
+                                        _onRegionChanged(region),
+                                  ),
+                                ),
+                              ],
+                            ),
+                  SizedBox(height: 16),
                   Text(
-                    "Hello Cassandra",
+                    "Services",
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF8B4513),
+                      color: Colors.black,
                     ),
                   ),
                   SizedBox(height: 8),
-
-                  // Location Dropdown
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Color(0xFFE0E0E0)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Color(0xFF666666),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          "Beckenham, England, United kingdom",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF666666),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: Color(0xFF666666),
-                        ),
-                      ],
+                  Text(
+                    "All Categories",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
                     ),
                   ),
                 ],
               ),
             ),
-
+            SizedBox(height: 16),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Image Slider Section
-                    Container(
-                      height: 200,
-                      margin: EdgeInsets.symmetric(horizontal: 16),
-                      child: Stack(
-                        children: [
-                          // PageView for slider
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: Color(0xFFF5F5F5),
+              child: _loadingCategories
+                  ? Center(child: CircularProgressIndicator())
+                  : _errorCategories
+                      ? Center(child: Text('Failed to load categories'))
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: GridView.builder(
+                            itemCount: _categories.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              childAspectRatio: 1.1,
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: PageView.builder(
-                                controller: _pageController,
-                                onPageChanged: (index) {
-                                  setState(() {
-                                    _currentSlide = index;
-                                  });
-                                },
-                                itemCount: _sliderImages.length,
-                                itemBuilder: (context, index) {
-                                  return Container(
-                                    width: double.infinity,
-                                    height: 200,
-                                    child: Stack(
-                                      children: [
-                                        // Image placeholder
-                                        // Container(
-                                        //   width: double.infinity,
-                                        //   height: double.infinity,
-                                        //   color: Color(0xFFF5F5F5),
-                                        //   child: Center(
-                                        //     child: Column(
-                                        //       mainAxisAlignment:
-                                        //           MainAxisAlignment.center,
-                                        //       children: [
-                                        //         Icon(
-                                        //           Icons.image,
-                                        //           size: 48,
-                                        //           color: Color(0xFFBDBDBD),
-                                        //         ),
-                                        //         SizedBox(height: 8),
-                                        //         Text(
-                                        //           "Slider Image ${index + 1}",
-                                        //           style: TextStyle(
-                                        //             color: Color(0xFFBDBDBD),
-                                        //             fontSize: 14,
-                                        //           ),
-                                        //         ),
-                                        //         Text(
-                                        //           _sliderImages[index],
-                                        //           style: TextStyle(
-                                        //             color: Color(0xFFBDBDBD),
-                                        //             fontSize: 12,
-                                        //           ),
-                                        //         ),
-                                        //       ],
-                                        //     ),
-                                        //   ),
-                                        // ),
-                                        // Uncomment and replace with your actual image:
-                                        Image.asset(
-                                          _sliderImages[index],
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          fit: BoxFit.cover,
-                                        ).localAsset(),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-
-                          // Slide indicators
-                          Positioned(
-                            bottom: 16,
-                            left: 0,
-                            right: 0,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(
-                                _sliderImages.length,
-                                (index) => Container(
-                                  margin: EdgeInsets.symmetric(horizontal: 4),
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _currentSlide == index
-                                        ? Colors.white
-                                        : Colors.white.withOpacity(0.5),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 32),
-
-                    // Recent Categories Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Recent Categories",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF000000),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () {
-                              // Navigate to all services
+                            itemBuilder: (context, index) {
+                              final category = _categories[index];
+                              return _buildCategoryCard(category);
                             },
-                            child: Text(
-                              "All Services",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF8B4513),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Categories Grid
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.2,
-                        ),
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          return _buildCategoryCard(_categories[index]);
-                        },
-                      ),
-                    ),
-
-                    SizedBox(height: 32),
-
-                    // Book Now Button
-                    Container(
-                      margin: EdgeInsets.symmetric(horizontal: 16),
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Navigate to booking
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF000000),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: Text(
-                          "Book Now",
-                          style: TextStyle(
-                            color: Color(0xFFFFFFFF),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 24),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
@@ -300,10 +195,12 @@ class _HomeTabState extends NyState<HomeTab> {
     );
   }
 
-  Widget _buildCategoryCard(CategoryItem category) {
+  Widget _buildCategoryCard(ServiceCategory category) {
+    final String title = category.name;
+    final String? iconUrl = category.icon;
     return GestureDetector(
       onTap: () {
-        // Navigate to category details
+        // TODO: Navigate to category details
       },
       child: Container(
         decoration: BoxDecoration(
@@ -311,7 +208,7 @@ class _HomeTabState extends NyState<HomeTab> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.08),
               blurRadius: 8,
               offset: Offset(0, 2),
             ),
@@ -321,41 +218,24 @@ class _HomeTabState extends NyState<HomeTab> {
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             children: [
-              // Image placeholder
-              // Container(
-              //   width: double.infinity,
-              //   height: double.infinity,
-              //   color: Color(0xFFF5F5F5),
-              //   child: Center(
-              //     child: Column(
-              //       mainAxisAlignment: MainAxisAlignment.center,
-              //       children: [
-              //         Icon(
-              //           Icons.image,
-              //           size: 32,
-              //           color: Color(0xFFBDBDBD),
-              //         ),
-              //         SizedBox(height: 4),
-              //         Text(
-              //           category.image,
-              //           style: TextStyle(
-              //             color: Color(0xFFBDBDBD),
-              //             fontSize: 10,
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   ),
-              // ),
-              // Uncomment and replace with your actual image:
-              Image.asset(
-                category.image,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-              ).localAsset(),
-
-              // Gradient overlay
+              if (iconUrl != null && iconUrl.isNotEmpty)
+                Image.network(
+                  iconUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey[200],
+                    child: Center(child: Icon(Icons.image, color: Colors.grey)),
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.grey[200],
+                  child: Center(child: Icon(Icons.image, color: Colors.grey)),
+                ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -368,19 +248,19 @@ class _HomeTabState extends NyState<HomeTab> {
                   ),
                 ),
               ),
-
-              // Category title
               Positioned(
                 bottom: 12,
                 left: 12,
                 right: 12,
                 child: Text(
-                  category.title,
+                  title,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -389,14 +269,4 @@ class _HomeTabState extends NyState<HomeTab> {
       ),
     );
   }
-}
-
-class CategoryItem {
-  final String title;
-  final String image;
-
-  CategoryItem({
-    required this.title,
-    required this.image,
-  });
 }
