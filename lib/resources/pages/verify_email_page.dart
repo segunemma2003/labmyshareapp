@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/app/utils/api_error_handler.dart';
+import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
 import 'package:flutter_app/resources/pages/sign_in_page.dart';
 import 'package:flutter_app/resources/pages/select_region_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -19,7 +20,7 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
 
   bool _canResend = false;
-  int _resendCountdown = 60;
+  int _resendCountdown = 120; // 2 minutes as per API rate limit
   Timer? _timer;
   String? _email;
 
@@ -55,7 +56,7 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
 
   void _startResendTimer() {
     _canResend = false;
-    _resendCountdown = 60;
+    _resendCountdown = 120; // 2 minutes as per API documentation
     _timer?.cancel();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       if (mounted) {
@@ -69,6 +70,12 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
         });
       }
     });
+  }
+
+  String _formatCountdown() {
+    int minutes = _resendCountdown ~/ 60;
+    int seconds = _resendCountdown % 60;
+    return '${minutes}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -110,6 +117,31 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
                   color: Colors.grey[600],
                 ),
               ),
+              SizedBox(height: 12),
+
+              // OTP expiry info
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 16, color: Colors.amber.shade700),
+                    SizedBox(width: 8),
+                    Text(
+                      "Code expires in 10 minutes",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.amber.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               SizedBox(height: 48),
 
               // OTP Input Fields (6 digits)
@@ -131,11 +163,13 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: _canResend ? _handleResendCode : null,
+                    onTap: _canResend && !isLocked('resend_otp')
+                        ? _handleResendCode
+                        : null,
                     child: Text(
                       _canResend
                           ? "Resend code"
-                          : "Resend code (${_resendCountdown}s)",
+                          : "Resend code (${_formatCountdown()})",
                       style: TextStyle(
                         fontSize: 14,
                         color: _canResend ? Colors.blue : Colors.grey[400],
@@ -153,7 +187,9 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _isValidCode() ? _handleVerify : null,
+                  onPressed: _isValidCode() && !isLocked('verify_otp')
+                      ? _handleVerify
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         _isValidCode() ? Colors.black : Colors.grey[300],
@@ -162,32 +198,25 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text(
-                    "Verify",
-                    style: TextStyle(
-                      color: _isValidCode() ? Colors.white : Colors.grey[600],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-
-              // Skip for now (for development/testing)
-              Center(
-                child: TextButton(
-                  onPressed: () {
-                    // For development - skip verification
-                    _navigateToNextPage();
-                  },
-                  child: Text(
-                    "Skip for now (Dev only)",
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 14,
-                    ),
-                  ),
+                  child: isLocked('verify_otp')
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          "Verify",
+                          style: TextStyle(
+                            color: _isValidCode()
+                                ? Colors.white
+                                : Colors.grey[600],
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
               SizedBox(height: 24),
@@ -271,25 +300,16 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   }
 
   Future<void> _handleVerify() async {
-    if (!_isValidCode()) return;
+    if (!_isValidCode() || _email == null) return;
 
-    // Use Nylo's built-in loading system
     await lockRelease('verify_otp', perform: () async {
       try {
-        // For now, we'll simulate verification since the API doesn't have an OTP verification endpoint
-        // In a real implementation, you would call an API endpoint like:
-        // bool isValid = await AuthService.verifyOTP(email: _email, otp: _getOTPCode());
+        final success = await AuthService.verifyEmail(
+          email: _email!,
+          otp: _getOTPCode(),
+        );
 
-        String otpCode = _getOTPCode();
-
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 1));
-
-        // For demo purposes, accept any 6-digit code
-        // In production, this would be validated by your backend
-        bool isValid = otpCode.length == 6;
-
-        if (isValid) {
+        if (success) {
           // Show success message
           showToastNotification(
             context,
@@ -298,20 +318,31 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
             description: "Email verified successfully!",
           );
 
-          // Navigate to next page
-          _navigateToNextPage();
+          // Check if user needs to select region
+          final needsRegion = await AuthService.needsRegionSelection();
+
+          if (needsRegion) {
+            // Navigate to region selection
+            routeTo(
+              SelectRegionPage.path,
+              removeUntilPredicate: (route) => false,
+            );
+          } else {
+            // Navigate to main app
+
+            routeTo(BaseNavigationHub.path);
+          }
         } else {
           // Invalid code
           showToastNotification(
             context,
             style: ToastNotificationStyleType.danger,
             title: "Invalid Code",
-            description: "Invalid verification code. Please try again.",
+            description: "The verification code is invalid or has expired.",
           );
           _clearFields();
         }
       } catch (e) {
-        // Handle error
         ApiErrorHandler.handleError(e, context: context);
         _clearFields();
       }
@@ -321,32 +352,35 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
   Future<void> _handleResendCode() async {
     if (!_canResend || _email == null) return;
 
-    // Use Nylo's built-in loading system
     await lockRelease('resend_otp', perform: () async {
       try {
-        // Since the API doesn't have a specific resend OTP endpoint,
-        // we would typically call the forgot password endpoint or similar
-        // For now, we'll simulate the resend
-
-        // Example of what you might call:
-        // await AuthService.forgotPassword(email: _email!);
-
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 1));
-
-        // Show success message
-        showToastNotification(
-          context,
-          style: ToastNotificationStyleType.success,
-          title: "Code Sent",
-          description: "Verification code has been resent to your email.",
+        final success = await AuthService.resendOtp(
+          email: _email!,
+          purpose: 'email_verification',
         );
 
-        // Restart timer
-        _startResendTimer();
+        if (success) {
+          // Show success message
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Code Sent",
+            description: "A new verification code has been sent to your email.",
+          );
 
-        // Clear existing input
-        _clearFields();
+          // Restart timer
+          _startResendTimer();
+
+          // Clear existing input
+          _clearFields();
+        } else {
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Error",
+            description: "Failed to resend code. Please try again later.",
+          );
+        }
       } catch (e) {
         ApiErrorHandler.handleError(e, context: context);
       }
@@ -361,11 +395,5 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
       _focusNodes[0].requestFocus();
     }
     setState(() {});
-  }
-
-  void _navigateToNextPage() {
-    // After email verification, navigate to region selection
-    // since region selection happens after login/registration
-    routeTo(SelectRegionPage.path, removeUntilPredicate: (route) => false);
   }
 }

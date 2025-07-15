@@ -48,6 +48,30 @@ class AuthApiService extends NyApiService {
     );
   }
 
+  Future<Map<String, dynamic>?> verifyEmail({
+    required String email,
+    required String otp,
+  }) async {
+    return await network(
+      request: (request) => request.post("/auth/verify-email/", data: {
+        "email": email,
+        "otp": otp,
+      }),
+    );
+  }
+
+  Future<Map<String, dynamic>?> resendOtp({
+    required String email,
+    required String purpose,
+  }) async {
+    return await network(
+      request: (request) => request.post("/auth/resend-otp/", data: {
+        "email": email,
+        "purpose": purpose,
+      }),
+    );
+  }
+
   Future<Map<String, dynamic>?> login({
     required String email,
     required String password,
@@ -86,6 +110,18 @@ class AuthApiService extends NyApiService {
     );
   }
 
+  Future<Map<String, dynamic>?> verifyResetOtp({
+    required String email,
+    required String otp,
+  }) async {
+    return await network(
+      request: (request) => request.post("/auth/verify-reset-otp/", data: {
+        "email": email,
+        "otp": otp,
+      }),
+    );
+  }
+
   Future<Map<String, dynamic>?> resetPassword({
     required String email,
     required String otp,
@@ -120,11 +156,46 @@ class AuthApiService extends NyApiService {
     );
   }
 
+  Future<Map<String, dynamic>?> updateProfileImage({
+    required String imagePath,
+  }) async {
+    FormData formData = FormData.fromMap({
+      "profile_picture": await MultipartFile.fromFile(
+        imagePath,
+        filename: imagePath.split('/').last,
+      ),
+    });
+
+    return await network(
+      request: (request) => request.put(
+        "/auth/profile/image/",
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>?> switchRegion(
       {required String regionCode}) async {
     return await network(
       request: (request) => request.post("/auth/switch-region/", data: {
         "region_code": regionCode,
+      }),
+    );
+  }
+
+  Future<User?> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    return await network<User>(
+      request: (request) => request.post("/auth/change-password/", data: {
+        "current_password": currentPassword,
+        "new_password": newPassword,
+        "confirm_password": confirmPassword,
       }),
     );
   }

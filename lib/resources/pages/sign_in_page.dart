@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/utils/api_error_handler.dart';
 import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
-import 'package:flutter_app/resources/pages/new_password_page.dart';
+import 'package:flutter_app/resources/pages/forgot_password_page.dart';
 import 'package:flutter_app/resources/pages/select_region_page.dart';
 import 'package:flutter_app/resources/pages/sign_up_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -17,12 +19,6 @@ class _SignInPageState extends NyPage<SignInPage> {
   final _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
-
-  @override
-  get init => () {
-        // Initialize any data here
-      };
 
   @override
   void dispose() {
@@ -76,9 +72,7 @@ class _SignInPageState extends NyPage<SignInPage> {
                     children: [
                       // Continue with Google Button
                       _buildSocialButton(
-                        icon: Icon(Icons.g_mobiledata,
-                            size: 24, color: Colors.black),
-                        // _buildGoogleIcon(),
+                        icon: _buildGoogleIcon(),
                         text: "Continue with Google",
                         onPressed: _handleGoogleSignIn,
                       ),
@@ -129,7 +123,7 @@ class _SignInPageState extends NyPage<SignInPage> {
                                   return 'Please enter your email';
                                 }
                                 if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(value)) {
+                                    .hasMatch(value.trim())) {
                                   return 'Please enter a valid email';
                                 }
                                 return null;
@@ -194,14 +188,15 @@ class _SignInPageState extends NyPage<SignInPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleSignIn,
+                  onPressed: isLocked('signin') ? null : _handleSignIn,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
+                    disabledBackgroundColor: Colors.grey[400],
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: _isLoading
+                  child: isLocked('signin')
                       ? SizedBox(
                           height: 20,
                           width: 20,
@@ -236,8 +231,7 @@ class _SignInPageState extends NyPage<SignInPage> {
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () {
-                            routeTo(SignUpPage.path,
-                                transitionType: TransitionType.rightToLeft());
+                            routeTo(SignUpPage.path);
                           },
                           child: Text(
                             "Sign Up",
@@ -299,9 +293,7 @@ class _SignInPageState extends NyPage<SignInPage> {
     return Container(
       width: 24,
       height: 24,
-      child: CustomPaint(
-        painter: GoogleIconPainter(),
-      ),
+      child: Image.asset('google_logo.png').localAsset(),
     );
   }
 
@@ -367,103 +359,153 @@ class _SignInPageState extends NyPage<SignInPage> {
   }
 
   Future<void> _handleSignIn() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // TODO: Implement your sign-in logic here
-        // Example:
-        // await Auth.signIn(
-        //   email: _emailController.text,
-        //   password: _passwordController.text,
-        // );
-
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 2));
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Signed in successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate to main app
-        routeTo(SelectRegionPage.path, navigationType: NavigationType.push);
-      } catch (e) {
-        // Handle error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Invalid email or password. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    await lockRelease('signin', perform: () async {
+      try {
+        final success = await AuthService.login(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        if (success) {
+          // Check if user is verified
+          final user = await AuthService.getCurrentUser();
+
+          if (user != null && !user.isVerified!) {
+            // User needs to verify email
+            showToastNotification(
+              context,
+              style: ToastNotificationStyleType.warning,
+              title: "Verify Email",
+              description: "Please verify your email to continue.",
+            );
+            return;
+          }
+
+          // Check if user needs to select region
+          final needsRegion = await AuthService.needsRegionSelection();
+
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description: "Signed in successfully!",
+          );
+
+          if (needsRegion) {
+            // Navigate to region selection
+            routeTo(
+              SelectRegionPage.path,
+              removeUntilPredicate: (route) => false,
+            );
+          } else {
+            // Navigate to main app
+            routeTo(
+              BaseNavigationHub.path,
+              removeUntilPredicate: (route) => false,
+            );
+          }
+        } else {
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Login Failed",
+            description: "Invalid email or password. Please try again.",
+          );
+        }
+      } catch (e) {
+        ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 
   Future<void> _handleGoogleSignIn() async {
-    try {
-      // TODO: Implement Google Sign In
-      // Example:
-      // await Auth.signInWithGoogle();
+    await lockRelease('google_signin', perform: () async {
+      try {
+        // TODO: Implement Firebase Google Sign In
+        // 1. Sign in with Google using Firebase Auth
+        // 2. Get the Firebase token
+        // 3. Call AuthService.socialAuth with the token
 
-      print('Google Sign In tapped');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google Sign In - Implementation needed'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google Sign In failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+        // Example implementation:
+        // final googleUser = await GoogleSignIn().signIn();
+        // if (googleUser != null) {
+        //   final googleAuth = await googleUser.authentication;
+        //   final credential = GoogleAuthProvider.credential(
+        //     accessToken: googleAuth.accessToken,
+        //     idToken: googleAuth.idToken,
+        //   );
+        //   final firebaseUser = await FirebaseAuth.instance.signInWithCredential(credential);
+        //   final firebaseToken = await firebaseUser.user?.getIdToken();
+        //
+        //   if (firebaseToken != null) {
+        //     final success = await AuthService.socialAuth(
+        //       firebaseToken: firebaseToken,
+        //       provider: 'google',
+        //     );
+        //   }
+        // }
+
+        showToastNotification(
+          context,
+          style: ToastNotificationStyleType.info,
+          title: "Coming Soon",
+          description: "Google Sign In will be available soon!",
+        );
+      } catch (e) {
+        ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 
   Future<void> _handleAppleSignIn() async {
-    try {
-      // TODO: Implement Apple Sign In
-      // Example:
-      // await Auth.signInWithApple();
+    await lockRelease('apple_signin', perform: () async {
+      try {
+        // TODO: Implement Firebase Apple Sign In
+        // 1. Sign in with Apple using Firebase Auth
+        // 2. Get the Firebase token
+        // 3. Call AuthService.socialAuth with the token
 
-      print('Apple Sign In tapped');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Apple Sign In - Implementation needed'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Apple Sign In failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+        // Example implementation:
+        // final appleCredential = await SignInWithApple.getAppleIDCredential(
+        //   scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+        // );
+        // final oauthCredential = OAuthProvider("apple.com").credential(
+        //   idToken: appleCredential.identityToken,
+        //   accessToken: appleCredential.authorizationCode,
+        // );
+        // final firebaseUser = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+        // final firebaseToken = await firebaseUser.user?.getIdToken();
+        //
+        // if (firebaseToken != null) {
+        //   final success = await AuthService.socialAuth(
+        //     firebaseToken: firebaseToken,
+        //     provider: 'apple',
+        //   );
+        // }
+
+        showToastNotification(
+          context,
+          style: ToastNotificationStyleType.info,
+          title: "Coming Soon",
+          description: "Apple Sign In will be available soon!",
+        );
+      } catch (e) {
+        ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 
   void _handleForgotPassword() {
-    // TODO: Navigate to forgot password page or show dialog
-    routeTo(NewPasswordPage.path,
-        transitionType:
-            TransitionType.rotate(alignment: Alignment.bottomRight));
+    // Navigate to forgot password page
+    routeTo(ForgotPasswordPage.path);
   }
 }
 
-// Custom painter for Google icon
+// Simple Google logo representation
 class GoogleIconPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

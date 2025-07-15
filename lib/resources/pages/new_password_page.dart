@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/utils/api_error_handler.dart';
+import 'package:flutter_app/resources/pages/sign_in_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class NewPasswordPage extends NyStatefulWidget {
@@ -14,11 +17,18 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isLoading = false;
+
+  String? _email;
+  String? _otp;
 
   @override
   get init => () {
-        // Initialize any data here
+        // Get email and OTP from route data
+        final data = widget.data();
+        if (data != null) {
+          _email = data['email'];
+          _otp = data['otp'];
+        }
       };
 
   @override
@@ -86,6 +96,40 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Password Requirements
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF0F8FF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Color(0xFFE0E0E0)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Password must contain:",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF424242),
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                _buildRequirement(
+                                  "At least 8 characters",
+                                  _passwordController.text.length >= 8,
+                                ),
+                                _buildRequirement(
+                                  "At least one letter and one number",
+                                  RegExp(r'^(?=.*[A-Za-z])(?=.*\d)')
+                                      .hasMatch(_passwordController.text),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 24),
+
                           // Password
                           _buildLabel("Password"),
                           _buildTextField(
@@ -112,9 +156,9 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
                               if (value.length < 8) {
                                 return 'Password must be at least 8 characters';
                               }
-                              if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)')
+                              if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)')
                                   .hasMatch(value)) {
-                                return 'Password must contain uppercase, lowercase and number';
+                                return 'Password must contain at least one letter and one number';
                               }
                               return null;
                             },
@@ -159,7 +203,7 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
 
                   // Create New Password Button
                   GestureDetector(
-                    onTap: _isValidForm() && !_isLoading
+                    onTap: _isValidForm() && !isLocked('reset_password')
                         ? _handleCreatePassword
                         : null,
                     child: Container(
@@ -172,7 +216,7 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
-                        child: _isLoading
+                        child: isLocked('reset_password')
                             ? SizedBox(
                                 height: 20,
                                 width: 20,
@@ -201,6 +245,29 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRequirement(String text, bool isMet) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        children: [
+          Icon(
+            isMet ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: isMet ? Color(0xFF4CAF50) : Color(0xFF9E9E9E),
+          ),
+          SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: isMet ? Color(0xFF4CAF50) : Color(0xFF9E9E9E),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -234,6 +301,8 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
         obscureText: obscureText,
         keyboardType: keyboardType,
         validator: validator,
+        onChanged: (_) =>
+            setState(() {}), // Update UI for password requirements
         style: TextStyle(
           color: Color(0xFF000000),
           fontSize: 16,
@@ -279,58 +348,63 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
     return _passwordController.text.isNotEmpty &&
         _confirmPasswordController.text.isNotEmpty &&
         _passwordController.text == _confirmPasswordController.text &&
-        _passwordController.text.length >= 8;
+        _passwordController.text.length >= 8 &&
+        RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(_passwordController.text);
   }
 
   Future<void> _handleCreatePassword() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // TODO: Implement your password creation logic here
-        // Example:
-        // await Auth.createNewPassword(
-        //   password: _passwordController.text,
-        // );
-
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 2));
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Password updated successfully!',
-              style: TextStyle(color: Color(0xFFFFFFFF)),
-            ),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
-
-        // Navigate to success page or login
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/sign-in',
-          (route) => false,
-        );
-      } catch (e) {
-        // Handle error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Failed to update password. Please try again.',
-              style: TextStyle(color: Color(0xFFFFFFFF)),
-            ),
-            backgroundColor: Color(0xFFF44336),
-          ),
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    // Check if we have email and OTP from previous page
+    if (_email == null || _otp == null) {
+      showToastNotification(
+        context,
+        style: ToastNotificationStyleType.danger,
+        title: "Error",
+        description:
+            "Invalid session. Please restart the password reset process.",
+      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      return;
+    }
+
+    await lockRelease('reset_password', perform: () async {
+      try {
+        final success = await AuthService.resetPassword(
+          email: _email!,
+          otp: _otp!,
+          newPassword: _passwordController.text,
+          confirmPassword: _confirmPasswordController.text,
+        );
+
+        if (success) {
+          // Show success message
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description:
+                "Password updated successfully! Please sign in with your new password.",
+          );
+
+          // Navigate to sign in page
+          routeTo(
+            SignInPage.path,
+            removeUntilPredicate: (route) => false,
+          );
+        } else {
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Error",
+            description: "Failed to update password. Please try again.",
+          );
+        }
+      } catch (e) {
+        ApiErrorHandler.handleError(e, context: context);
+      }
+    });
   }
 }

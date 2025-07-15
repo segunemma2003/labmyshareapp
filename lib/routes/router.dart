@@ -1,3 +1,5 @@
+import '/resources/pages/reset_password_o_t_p_page.dart';
+import '/resources/pages/forgot_password_page.dart';
 import '/resources/pages/welcome_screen_page.dart';
 import '/resources/pages/legal_page.dart';
 import '/resources/pages/faqs_page.dart';
@@ -80,4 +82,6 @@ appRouter() => nyRoutes((router) {
       router.add(FaqsPage.path);
       router.add(LegalPage.path);
       router.add(WelcomeScreenPage.path);
-    });
+      router.add(ForgotPasswordPage.path);
+  router.add(ResetPasswordOTPPage.path);
+});
