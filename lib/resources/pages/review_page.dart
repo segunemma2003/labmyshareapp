@@ -127,7 +127,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
 
   Widget _buildPaymentModal() {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.95,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
