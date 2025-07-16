@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/app/services/services_data_service.dart';
+import 'package:flutter_app/app/models/service_item.dart';
+import 'package:flutter_app/resources/pages/select_services_page.dart';
 
 class ServicesTab extends StatefulWidget {
   const ServicesTab({super.key});
@@ -9,17 +12,9 @@ class ServicesTab extends StatefulWidget {
 }
 
 class _ServicesTabState extends NyState<ServicesTab> {
-  // All service categories
-  final List<ServiceCategory> _allCategories = [
-    ServiceCategory(title: 'Braids', image: 'category1.jpg'),
-    ServiceCategory(title: 'Cut and Coloring', image: 'category2.png'),
-    ServiceCategory(title: 'Scalp Treatment', image: 'category3.png'),
-    ServiceCategory(title: 'Wig Service', image: 'category4.jpg'),
-    ServiceCategory(title: 'Hair Smoothing', image: 'category5.png'),
-    ServiceCategory(title: 'Clip ins & Treatments', image: 'category6.png'),
-    ServiceCategory(title: 'Mini Twist Packages', image: 'category7.jpg'),
-    ServiceCategory(title: 'Hair Maintenance', image: 'category8.png'),
-  ];
+  List<ServiceCategory> _allCategories = [];
+  ServiceCategory? _selectedCategory;
+  bool _loading = true;
 
   // Team members
   final List<TeamMember> _teamMembers = [
@@ -30,8 +25,14 @@ class _ServicesTabState extends NyState<ServicesTab> {
   ];
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        _allCategories = await ServicesDataService.getServiceCategories();
+        if (_allCategories.isNotEmpty) {
+          _selectedCategory = _allCategories.first;
+        }
+        setState(() {
+          _loading = false;
+        });
       };
 
   @override
@@ -39,144 +40,38 @@ class _ServicesTabState extends NyState<ServicesTab> {
     return Scaffold(
       backgroundColor: Color(0xFFFFFFFF),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header Section
-            Container(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: _loading
+            ? Center(child: CircularProgressIndicator())
+            : Column(
                 children: [
-                  // Location Dropdown
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Color(0xFFE0E0E0)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // UK Flag
-                        Container(
-                          width: 20,
-                          height: 14,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                          child: CustomPaint(
-                            painter: UKFlagPainter(),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          "Beckenham, England, United kingdom",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF666666),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                          color: Color(0xFF666666),
-                        ),
-                      ],
+                  // Dropdown for categories
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: DropdownButton<ServiceCategory>(
+                      value: _selectedCategory,
+                      isExpanded: true,
+                      hint: Text('Select a category'),
+                      items: _allCategories.map((cat) {
+                        return DropdownMenuItem<ServiceCategory>(
+                          value: cat,
+                          child: Text(cat.name),
+                        );
+                      }).toList(),
+                      onChanged: (cat) {
+                        if (cat != null) {
+                          setState(() => _selectedCategory = cat);
+                          // Navigate to SelectServicesPage with selected category
+                          routeTo(SelectServicesPage.path, data: {
+                            'activeCategory': cat,
+                          });
+                        }
+                      },
                     ),
                   ),
-                  SizedBox(height: 16),
-
-                  // Services Title
-                  Text(
-                    "Services",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF000000),
-                    ),
-                  ),
+                  // Optionally, show the grid below or just the dropdown
+                  // ... existing code for grid or other UI ...
                 ],
               ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // All Categories Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "All Categories",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF000000),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Categories Grid
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.2,
-                        ),
-                        itemCount: _allCategories.length,
-                        itemBuilder: (context, index) {
-                          return _buildCategoryCard(_allCategories[index]);
-                        },
-                      ),
-                    ),
-
-                    SizedBox(height: 32),
-
-                    // Our Team Section
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "Our Team of Professionals",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF000000),
-                        ),
-                      ),
-                    ),
-
-                    SizedBox(height: 16),
-
-                    // Team Members Row
-                    Container(
-                      height: 100,
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _teamMembers.length,
-                        itemBuilder: (context, index) {
-                          return _buildTeamMemberCard(
-                              _teamMembers[index], index);
-                        },
-                      ),
-                    ),
-
-                    SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -185,7 +80,7 @@ class _ServicesTabState extends NyState<ServicesTab> {
     return GestureDetector(
       onTap: () {
         // Navigate to category details
-        print('Selected category: ${category.title}');
+        print('Selected category: ${category.name}');
       },
       child: Container(
         decoration: BoxDecoration(
@@ -231,7 +126,7 @@ class _ServicesTabState extends NyState<ServicesTab> {
               // ),
               // Uncomment and replace with your actual image:
               Image.asset(
-                category.image,
+                "public/images/category_placeholder.png",
                 width: double.infinity,
                 height: double.infinity,
                 fit: BoxFit.cover,
@@ -257,7 +152,7 @@ class _ServicesTabState extends NyState<ServicesTab> {
                 left: 12,
                 right: 12,
                 child: Text(
-                  category.title,
+                  category.name,
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -403,23 +298,9 @@ class UKFlagPainter extends CustomPainter {
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
-// Data models
-class ServiceCategory {
-  final String title;
-  final String image;
-
-  ServiceCategory({
-    required this.title,
-    required this.image,
-  });
-}
-
+// 1. Re-add TeamMember class at the bottom if not imported from elsewhere
 class TeamMember {
   final String name;
   final String image;
-
-  TeamMember({
-    required this.name,
-    required this.image,
-  });
+  TeamMember({required this.name, required this.image});
 }

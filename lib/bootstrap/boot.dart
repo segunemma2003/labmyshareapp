@@ -3,7 +3,6 @@ import '/resources/widgets/splash_screen.dart';
 import '/bootstrap/app.dart';
 import '/config/providers.dart';
 import 'package:nylo_framework/nylo_framework.dart';
-import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
 import 'package:flutter_app/resources/pages/sign_in_page.dart';
 
@@ -30,12 +29,8 @@ class Boot {
   static Future<void> finished(Nylo nylo) async {
     await bootFinished(nylo, providers);
 
-    // Persistent authentication logic
-    bool isAuthenticated = await AuthService.isAuthenticated();
-    runApp(MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: isAuthenticated ? BaseNavigationHub() : SignInPage(),
-    ));
+    // Restore correct theme context
+    runApp(Main(nylo));
   }
 }
 

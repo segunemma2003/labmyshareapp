@@ -134,17 +134,35 @@ class ProfessionalsApiService extends NyApiService {
   Future<List<dynamic>?> getAvailableSlots({
     required int professionalId,
     required int serviceId,
-    required String date,
+    String? date,
+    String? startDate,
+    String? endDate,
   }) async {
+    final queryParams = {
+      "professional_id": professionalId.toString(),
+      "service_id": serviceId.toString(),
+    };
+    if (date != null) queryParams["date"] = date;
+    if (startDate != null) queryParams["start_date"] = startDate;
+    if (endDate != null) queryParams["end_date"] = endDate;
     return await network(
-      request: (request) =>
-          request.get("/professionals/available-slots/", queryParameters: {
-        "professional_id": professionalId,
-        "service_id": serviceId,
-        "date": date,
-      }),
-      cacheKey: "slots_${professionalId}_${serviceId}_$date",
+      request: (request) => request.get("/professionals/available-slots/",
+          queryParameters: queryParams),
+      cacheKey:
+          "slots_${professionalId}_${serviceId}_${date ?? ''}_${startDate ?? ''}_${endDate ?? ''}",
       cacheDuration: const Duration(minutes: 5), // Short cache for availability
+    );
+  }
+
+  Future<List<dynamic>?> getUnavailability(
+      {required int professionalId}) async {
+    return await network(
+      request: (request) => request.get(
+        "/professionals/unavailability/",
+        queryParameters: {"professional_id": professionalId},
+      ),
+      cacheKey: "unavailability_$professionalId",
+      cacheDuration: const Duration(minutes: 10),
     );
   }
 }

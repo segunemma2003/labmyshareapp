@@ -73,16 +73,30 @@ class ProfessionalsDataService {
   static Future<List<dynamic>?> getAvailableSlots({
     required int professionalId,
     required int serviceId,
-    required String date,
+    String? date,
+    String? startDate,
+    String? endDate,
   }) async {
     try {
       return await _api.getAvailableSlots(
         professionalId: professionalId,
         serviceId: serviceId,
         date: date,
+        startDate: startDate,
+        endDate: endDate,
       );
     } catch (e) {
       print('Get available slots error: $e');
+      return null;
+    }
+  }
+
+  static Future<List<dynamic>?> getUnavailability(
+      {required int professionalId}) async {
+    try {
+      return await _api.getUnavailability(professionalId: professionalId);
+    } catch (e) {
+      print('Get unavailability error: $e');
       return null;
     }
   }

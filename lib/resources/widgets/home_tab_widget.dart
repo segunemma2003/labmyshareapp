@@ -213,75 +213,96 @@ class _HomeTabState extends NyState<HomeTab> {
     final String title = category.name;
     final String? iconUrl = category.icon;
     return GestureDetector(
-      onTap: () {
-        // Use Nylo's routeTo to navigate and pass arguments
-        routeTo('/select-services', data: {
-          'categories': _categories,
-          'initialCategory': category,
-        });
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            children: [
-              if (iconUrl != null && iconUrl.isNotEmpty)
-                Image.network(
-                  iconUrl,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+      onTap: _loadingCategories
+          ? null
+          : () {
+              if (_categories.isEmpty) {
+                print('Navigation blocked: _categories is empty');
+                return;
+              }
+
+              try {
+                print(
+                    'Navigating to /select-services with category: ${category.name}');
+                routeTo('/select-services', data: {
+                  'categories': _categories,
+                  'initialCategory': category,
+                });
+              } catch (e) {
+                print('Navigation error: $e');
+                // Optionally show a snackbar or dialog to the user
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text('Unable to navigate. Please try again.')),
+                );
+              }
+            },
+      child: Opacity(
+        opacity: _loadingCategories ? 0.5 : 1.0,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              children: [
+                if (iconUrl != null && iconUrl.isNotEmpty)
+                  Image.network(
+                    iconUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey[200],
+                      child:
+                          Center(child: Icon(Icons.image, color: Colors.grey)),
+                    ),
+                  )
+                else
+                  Container(
+                    width: double.infinity,
+                    height: double.infinity,
                     color: Colors.grey[200],
                     child: Center(child: Icon(Icons.image, color: Colors.grey)),
                   ),
-                )
-              else
                 Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  color: Colors.grey[200],
-                  child: Center(child: Icon(Icons.image, color: Colors.grey)),
-                ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                bottom: 12,
-                left: 12,
-                right: 12,
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  right: 12,
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

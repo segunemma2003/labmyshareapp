@@ -49,21 +49,22 @@ class BookingsApiService extends NyApiService {
   }
 
   Future<Map<String, dynamic>?> createBooking({
-    required int professional,
-    required int service,
+    required dynamic professional,
+    required dynamic service,
     required String scheduledDate,
     required String scheduledTime,
     required bool bookingForSelf,
     String? recipientName,
     String? recipientPhone,
     String? recipientEmail,
-    required String addressLine1,
+    String? addressLine1,
     String? addressLine2,
-    required String city,
-    required String postalCode,
+    String? city,
+    String? postalCode,
     String? locationNotes,
     String? customerNotes,
     List<Map<String, dynamic>>? selectedAddons,
+    required String paymentType,
   }) async {
     Map<String, dynamic> data = {
       "professional": professional,
@@ -71,11 +72,11 @@ class BookingsApiService extends NyApiService {
       "scheduled_date": scheduledDate,
       "scheduled_time": scheduledTime,
       "booking_for_self": bookingForSelf,
-      "address_line1": addressLine1,
-      "city": city,
-      "postal_code": postalCode,
+      "payment_type": paymentType,
     };
-
+    if (addressLine1 != null) data["address_line1"] = addressLine1;
+    if (city != null) data["city"] = city;
+    if (postalCode != null) data["postal_code"] = postalCode;
     if (!bookingForSelf) {
       data["recipient_name"] = recipientName;
       data["recipient_phone"] = recipientPhone;
@@ -85,7 +86,6 @@ class BookingsApiService extends NyApiService {
     if (locationNotes != null) data["location_notes"] = locationNotes;
     if (customerNotes != null) data["customer_notes"] = customerNotes;
     if (selectedAddons != null) data["selected_addons"] = selectedAddons;
-
     return await network(
       request: (request) => request.post("/bookings/create/", data: data),
     );

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/professional.dart';
 import 'package:flutter_app/app/models/service_item.dart';
 import 'package:flutter_app/app/services/professionals_data_service.dart';
+import 'package:flutter_app/resources/pages/review_page.dart';
+import 'package:table_calendar/table_calendar.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:intl/intl.dart';
 
@@ -25,6 +27,8 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
   String? _nextAvailableDate;
   double _totalPrice = 0;
   String _durationText = '';
+  Set<DateTime> _availableDates = {};
+  DateTime _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
   get init => () async {
@@ -35,10 +39,20 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
         _serviceAddOns =
             (data['serviceAddOns'] as Map<int, List<AddOn>>?) ?? {};
         _selectedDate = DateTime.now();
+        _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month);
         _calculateTotals();
-        await _loadAvailableTimes();
-        _generateVisibleDates();
+        await _fetchAvailableDatesForMonth(_focusedMonth);
+        _updateVisibleDates();
+        await _fetchSlotsForDate(_selectedDate);
       };
+
+  void _updateVisibleDates() {
+    // Rolling 7 days from today
+    final today = DateTime.now();
+    _visibleDates = List.generate(
+        7, (i) => DateTime(today.year, today.month, today.day + i));
+    setState(() {});
+  }
 
   void _calculateTotals() {
     _totalPrice =
@@ -52,14 +66,43 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
         : '';
   }
 
-  void _generateVisibleDates() {
-    // Show 7 days strip for the current week
-    final start =
-        _selectedDate.subtract(Duration(days: _selectedDate.weekday - 1));
-    _visibleDates = List.generate(7, (i) => start.add(Duration(days: i)));
+  Future<void> _fetchAvailableDatesForMonth(DateTime month) async {
+    if (_selectedProfessional?.id == null || _selectedServices.isEmpty) return;
+    final serviceId = _selectedServices.first.id;
+    final year = month.year;
+    final m = month.month;
+    final firstDay = DateTime(year, m, 1);
+    final lastDay = DateTime(year, m + 1, 0);
+    final startDateStr = DateFormat('yyyy-MM-dd').format(firstDay);
+    final endDateStr = DateFormat('yyyy-MM-dd').format(lastDay);
+    // Query all available slots for the month in one call
+    final slots = await ProfessionalsDataService.getAvailableSlots(
+      professionalId: _selectedProfessional!.id!,
+      serviceId: serviceId,
+      startDate: startDateStr,
+      endDate: endDateStr,
+    );
+    Set<DateTime> available = {};
+    if (slots != null && slots.isNotEmpty) {
+      for (var entry in slots) {
+        if (entry is Map &&
+            entry.containsKey('date') &&
+            entry['slots'] != null &&
+            (entry['slots'] as List).isNotEmpty) {
+          final date = DateTime.tryParse(entry['date']);
+          if (date != null) {
+            // Normalize to midnight
+            available.add(DateTime(date.year, date.month, date.day));
+          }
+        }
+      }
+    }
+    setState(() {
+      _availableDates = available;
+    });
   }
 
-  Future<void> _loadAvailableTimes() async {
+  Future<void> _fetchSlotsForDate(DateTime date) async {
     setState(() {
       _loading = true;
       _fullyBooked = false;
@@ -72,28 +115,106 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
       });
       return;
     }
-    // For simplicity, use the first service
     final serviceId = _selectedServices.first.id;
-    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
     final slots = await ProfessionalsDataService.getAvailableSlots(
       professionalId: _selectedProfessional!.id!,
       serviceId: serviceId,
       date: dateStr,
     );
     if (slots == null || slots.isEmpty) {
-      // Simulate next available date (in real app, get from API)
       setState(() {
         _fullyBooked = true;
-        _nextAvailableDate = DateFormat('EEEE, d MMMM')
-            .format(_selectedDate.add(Duration(days: 5)));
         _loading = false;
       });
     } else {
+      // Extract and format start_time for display
+      final times = <String>[];
+      for (var slot in slots) {
+        if (slot is Map &&
+            slot['is_available'] == true &&
+            slot['start_time'] != null) {
+          final startTime = slot['start_time'];
+          // Format as e.g. 06:00 AM
+          final formatted = _formatTime(startTime);
+          times.add(formatted);
+        }
+      }
       setState(() {
-        _availableTimes = List<String>.from(slots.map((s) => s.toString()));
+        _availableTimes = times;
         _fullyBooked = false;
         _loading = false;
       });
+    }
+  }
+
+  String _formatTime(String timeStr) {
+    try {
+      final t = DateFormat('HH:mm:ss').parse(timeStr);
+      return DateFormat('hh:mm a').format(t);
+    } catch (_) {
+      return timeStr;
+    }
+  }
+
+  void _showCalendarSheet() async {
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          padding: EdgeInsets.only(
+              top: 24,
+              left: 16,
+              right: 16,
+              bottom: 16 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Select date',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: TableCalendar(
+                  firstDay: DateTime.now().subtract(Duration(days: 365)),
+                  lastDay: DateTime.now().add(Duration(days: 365)),
+                  focusedDay: _focusedMonth,
+                  selectedDayPredicate: (day) => isSameDay(day, _selectedDate),
+                  onDaySelected: (selected, focused) async {
+                    if (_availableDates.contains(selected)) {
+                      Navigator.pop(context, selected);
+                    }
+                  },
+                  enabledDayPredicate: (day) => _availableDates.any((d) =>
+                      d.year == day.year &&
+                      d.month == day.month &&
+                      d.day == day.day),
+                  calendarFormat: CalendarFormat.month,
+                  headerVisible: true,
+                  onPageChanged: (focusedDay) async {
+                    _focusedMonth = DateTime(focusedDay.year, focusedDay.month);
+                    await _fetchAvailableDatesForMonth(_focusedMonth);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      await _fetchSlotsForDate(_selectedDate);
     }
   }
 
@@ -102,8 +223,15 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
       _selectedDate = date;
       _selectedTime = null;
     });
-    await _loadAvailableTimes();
-    _generateVisibleDates();
+    await _fetchSlotsForDate(_selectedDate);
+    // If date is not in visibleDates, update visibleDates to include it (centered if possible)
+    if (!_visibleDates.any((d) =>
+        d.year == date.year && d.month == date.month && d.day == date.day)) {
+      final idx = 3; // center selected date
+      _visibleDates = List.generate(
+          7, (i) => DateTime(date.year, date.month, date.day - idx + i));
+      setState(() {});
+    }
   }
 
   @override
@@ -160,28 +288,36 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                       setState(() {
                         _selectedProfessional = p;
                       });
-                      _loadAvailableTimes();
+                      // Fetch available dates and slots for the new professional
+                      _fetchAvailableDatesForMonth(_focusedMonth);
+                      _fetchSlotsForDate(_selectedDate);
                     },
                   ),
                 ),
                 SizedBox(width: 12),
-                // Month/Year picker
-                DropdownButton<String>(
-                  value: DateFormat('MMMM yyyy').format(_selectedDate),
-                  items: [
-                    DateFormat('MMMM yyyy').format(_selectedDate),
-                  ]
-                      .map((str) => DropdownMenuItem<String>(
-                            value: str,
-                            child: Text(str),
-                          ))
-                      .toList(),
-                  onChanged: (_) {}, // For now, static
+                // Calendar button
+                GestureDetector(
+                  onTap: _showCalendarSheet,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 18),
+                        SizedBox(width: 6),
+                        Text(DateFormat('MMM d').format(_selectedDate)),
+                        Icon(Icons.keyboard_arrow_down),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          // Horizontal date strip
+          // Horizontal date strip (rolling 7 days)
           SizedBox(
             height: 64,
             child: ListView.builder(
@@ -192,36 +328,47 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                 final isSelected = date.day == _selectedDate.day &&
                     date.month == _selectedDate.month &&
                     date.year == _selectedDate.year;
+                final isEnabled = _availableDates.any((d) =>
+                    d.year == date.year &&
+                    d.month == date.month &&
+                    d.day == date.day);
                 return GestureDetector(
-                  onTap: () => _onDateSelected(date),
-                  child: Container(
-                    width: 56,
-                    margin: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? Color(0xFFE8C6B6) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat('d').format(date),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                isSelected ? Color(0xFF8B4513) : Colors.black,
+                  onTap: isEnabled ? () => _onDateSelected(date) : null,
+                  child: Opacity(
+                    opacity: isEnabled ? 1.0 : 0.4,
+                    child: Container(
+                      width: 56,
+                      margin: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected ? Color(0xFFE8C6B6) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: isSelected
+                            ? Border.all(color: Color(0xFF8B4513), width: 2)
+                            : null,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            DateFormat('d').format(date),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isSelected ? Color(0xFF8B4513) : Colors.black,
+                            ),
                           ),
-                        ),
-                        Text(
-                          DateFormat('E').format(date),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isSelected ? Color(0xFF8B4513) : Colors.grey,
+                          Text(
+                            DateFormat('E').format(date),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  isSelected ? Color(0xFF8B4513) : Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -272,8 +419,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
               setState(() {
                 _selectedDate = _selectedDate.add(Duration(days: 5));
               });
-              _loadAvailableTimes();
-              _generateVisibleDates();
+              _fetchSlotsForDate(_selectedDate);
             },
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Color(0xFF8B4513)),
@@ -366,25 +512,46 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
             ),
           ),
           SizedBox(width: 16),
-          ElevatedButton(
-            onPressed: _selectedTime != null
-                ? () {
-                    // Continue to next step
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF000000),
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          SizedBox(
+            width: 140,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _selectedTime != null
+                  ? () {
+                      // Continue to ReviewPage
+                      routeTo(
+                        ReviewPage.path,
+                        data: {
+                          'selectedProfessional': _selectedProfessional,
+                          'professionals': _professionals,
+                          'selectedServices': _selectedServices,
+                          'serviceAddOns': _serviceAddOns,
+                          'selectedDate': _selectedDate,
+                          'selectedTime': _selectedTime,
+                          'totalPrice': _totalPrice,
+                          'durationText': _durationText,
+                        },
+                      );
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _selectedTime != null
+                    ? Color(0xFF000000)
+                    : Color(0xFF9E9E9E),
+                disabledBackgroundColor: Color(0xFF9E9E9E),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: EdgeInsets.zero,
+                elevation: 0,
               ),
-            ),
-            child: Text(
-              "Continue",
-              style: TextStyle(
-                color: Color(0xFFFFFFFF),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+              child: Text(
+                "Continue",
+                style: TextStyle(
+                  color: Color(0xFFFFFFFF),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -392,4 +559,19 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
       ),
     );
   }
+}
+
+class _WeekdayAvailability {
+  final int weekday; // 1=Mon, 7=Sun
+  final String? startTime;
+  final String? endTime;
+  _WeekdayAvailability({required this.weekday, this.startTime, this.endTime});
+}
+
+class _PartialUnavailability {
+  final DateTime date;
+  final String startTime;
+  final String endTime;
+  _PartialUnavailability(
+      {required this.date, required this.startTime, required this.endTime});
 }

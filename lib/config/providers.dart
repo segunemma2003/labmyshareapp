@@ -17,4 +17,6 @@ final Map<Type, NyProvider> providers = {
   RouteProvider: RouteProvider(),
   EventProvider: EventProvider(),
   PushNotificationsProvider: PushNotificationsProvider(),
+
+  // AuthProvider: AuthProvider(), // Removed
 };

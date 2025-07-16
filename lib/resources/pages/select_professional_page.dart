@@ -4,6 +4,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import 'package:flutter_app/app/services/professionals_data_service.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
+import '../../resources/pages/select_time_page.dart';
 
 class SelectProfessionalPage extends NyStatefulWidget {
   static RouteView path =
@@ -55,6 +56,16 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
 
   @override
   Widget view(BuildContext context) {
+    // Calculate total price from selected services and add-ons
+    final navData = widget.data() ?? {};
+    final selectedServices =
+        navData['selectedServices'] as List<Service>? ?? [];
+    final serviceAddOns =
+        navData['serviceAddOns'] as Map<int, List<AddOn>>? ?? {};
+    double totalPrice =
+        selectedServices.fold(0, (sum, s) => sum + (s.regionalPrice ?? 0));
+    totalPrice += serviceAddOns.values.expand((list) => list).fold(
+        0, (sum, addon) => sum + (double.tryParse(addon.price ?? "0") ?? 0));
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -209,9 +220,9 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                "£520",
-                                style: TextStyle(
+                              Text(
+                                "£${totalPrice.toStringAsFixed(0)}",
+                                style: const TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
@@ -232,9 +243,29 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                     borderRadius: BorderRadius.circular(8),
                                     onTap: selectedProfessionalIndex != null
                                         ? () {
-                                            // Handle continue action
-                                            print(
-                                                "Continue with professional: ${professionals[selectedProfessionalIndex!].name ?? 'Unknown'}");
+                                            final selectedProfessional =
+                                                professionals[
+                                                    selectedProfessionalIndex!];
+                                            final navData = widget.data() ?? {};
+                                            final selectedServices =
+                                                navData['selectedServices']
+                                                        as List<Service>? ??
+                                                    [];
+                                            final serviceAddOns = navData[
+                                                        'serviceAddOns']
+                                                    as Map<int, List<AddOn>>? ??
+                                                {};
+                                            routeTo(
+                                              SelectTimePage.path,
+                                              data: {
+                                                'selectedProfessional':
+                                                    selectedProfessional,
+                                                'professionals': professionals,
+                                                'selectedServices':
+                                                    selectedServices,
+                                                'serviceAddOns': serviceAddOns,
+                                              },
+                                            );
                                           }
                                         : null,
                                     child: const Center(

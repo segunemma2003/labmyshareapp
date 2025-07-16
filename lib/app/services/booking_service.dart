@@ -43,6 +43,7 @@ class BookingService {
     String? locationNotes,
     String? customerNotes,
     List<Map<String, dynamic>>? selectedAddons,
+    required String paymentType,
   }) async {
     try {
       final result = await _api.createBooking(
@@ -61,6 +62,7 @@ class BookingService {
         locationNotes: locationNotes,
         customerNotes: customerNotes,
         selectedAddons: selectedAddons,
+        paymentType: paymentType,
       );
 
       // Clear booking draft after successful creation

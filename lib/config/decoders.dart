@@ -62,6 +62,7 @@ final Map<Type, dynamic> modelDecoders = {
       List.from(data).map((json) => NotificationModel.fromJson(json)).toList(),
 
   NotificationModel: (data) => NotificationModel.fromJson(data),
+  List: (data) => List<dynamic>.from(data),
 };
 
 /* API Decoders
