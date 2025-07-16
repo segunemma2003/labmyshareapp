@@ -16,6 +16,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
   String selectedPaymentOption = "deposit"; // "full" or "deposit"
   bool showSuccessPage = false;
 
+  bool isStripeInitialized = false;
   // Remove dummy data, use real booking data
   List<dynamic> services = [];
   Map<int, List<dynamic>> serviceAddOns = {};
@@ -38,13 +39,77 @@ class _ReviewPageState extends NyPage<ReviewPage> {
         selectedTime = data['selectedTime'];
         totalPrice = (data['totalPrice'] ?? 0).toDouble();
         durationText = data['durationText'] ?? '';
+
+        await _initializeStripe();
         setState(() {});
       };
 
   int get depositAmount => (totalPrice * 0.5).roundToDouble().toInt();
   int get balanceAmount => totalPrice.toInt() - depositAmount;
 
+  Future<void> _initializeStripe() async {
+    try {
+      print("Initializing Stripe...");
+
+      // Get the Stripe publishable key from .env file using Nylo's getEnv
+      final String stripePublishableKey =
+          getEnv('STRIPE_PUBLISHABLE_KEY', defaultValue: '');
+
+      if (stripePublishableKey.isEmpty) {
+        throw Exception('STRIPE_PUBLISHABLE_KEY not found in .env file');
+      }
+
+      if (!stripePublishableKey.startsWith('pk_')) {
+        throw Exception(
+            'Invalid Stripe publishable key format. Must start with pk_test_ or pk_live_');
+      }
+
+      // Initialize Stripe
+      Stripe.publishableKey = stripePublishableKey;
+
+      // Optional: Set additional Stripe configuration
+      Stripe.merchantIdentifier =
+          'com.beautyspabyshea.com'; // Your Apple Pay merchant ID (optional)
+      Stripe.urlScheme = 'flutterstripe'; // For handling redirects (optional)
+
+      isStripeInitialized = true;
+      print("Stripe initialized successfully");
+      // ignore: unnecessary_null_comparison
+      print("Publishable Key Set: ${Stripe.publishableKey != null}");
+      print(
+          "Key type: ${stripePublishableKey.startsWith('pk_test_') ? 'TEST' : 'LIVE'}");
+      print("Key starts with: ${stripePublishableKey.substring(0, 7)}");
+    } catch (e) {
+      print("Failed to initialize Stripe: $e");
+      isStripeInitialized = false;
+
+      String errorMessage = "Payment system could not be initialized.";
+
+      if (e.toString().contains('not found in .env')) {
+        errorMessage =
+            "STRIPE_PUBLISHABLE_KEY not found in environment configuration.";
+      } else if (e.toString().contains('Invalid Stripe publishable key')) {
+        errorMessage = "Invalid Stripe key configuration.";
+      }
+
+      // Show error to user
+      showToast(
+        title: "Initialization Error",
+        description: errorMessage,
+      );
+    }
+  }
+
   void _showPaymentModal() {
+    if (!isStripeInitialized) {
+      showToast(
+        title: "Not ready",
+        description:
+            "Payment system is still loading. Please wait a moment and try again.",
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -565,7 +630,9 @@ class _ReviewPageState extends NyPage<ReviewPage> {
             });
           }
         }
-        final bookingData = {
+
+        print('Booking request body:');
+        print({
           "professional": selectedProfessional.id,
           "service": services.first.id,
           "scheduledDate": DateFormat('yyyy-MM-dd').format(selectedDate!),
@@ -578,61 +645,253 @@ class _ReviewPageState extends NyPage<ReviewPage> {
           },
           "customerNotes": _noteController.text,
           "selectedAddons": selectedAddons,
-        };
-
-        print('Booking request body:');
-        print({
-          ...bookingData,
           "paymentType": selectedPaymentOption == "full" ? "full" : "partial"
         });
 
         // Call booking API
         final response = await BookingService.createBooking(
-          professional: bookingData["professional"],
-          service: bookingData["service"],
-          scheduledDate: bookingData["scheduledDate"],
-          scheduledTime: bookingData["scheduledTime"],
-          bookingForSelf: bookingData["bookingForSelf"],
-          recipientName: bookingData["recipientName"],
-          recipientPhone: bookingData["recipientPhone"],
-          recipientEmail: bookingData["recipientEmail"],
+          professional: selectedProfessional.id,
+          service: services.first.id,
+          scheduledDate: DateFormat('yyyy-MM-dd').format(selectedDate!),
+          scheduledTime: _formatScheduledTime(selectedTime),
+          bookingForSelf: bookingForSelf,
+          recipientName: bookingForSelf ? null : _friendDetails['name'],
+          recipientPhone: bookingForSelf ? null : _friendDetails['phone'],
+          recipientEmail: bookingForSelf ? null : _friendDetails['email'],
           addressLine1: '', // Use empty string instead of null
           addressLine2: '',
           city: '',
           postalCode: '',
           locationNotes: null,
-          customerNotes: bookingData["customerNotes"],
-          selectedAddons: selectedAddons,
+          customerNotes:
+              _noteController.text.isNotEmpty ? _noteController.text : null,
+          selectedAddons: selectedAddons.isNotEmpty ? selectedAddons : null,
           paymentType: selectedPaymentOption == "full" ? "full" : "partial",
         );
 
         print("Booking API response: $response");
-        print(response?["stripe_payment_intent_id"]);
-        print(response?["stripe_client_secret"]);
 
-        if (response != null &&
-            response["stripe_payment_intent_id"] != null &&
-            response["stripe_client_secret"] != null) {
-          final clientSecret = response["stripe_client_secret"];
-          await _presentStripePaymentSheet(clientSecret);
+        // Check if booking creation was successful
+        if (response == null) {
+          print("Booking creation failed - response is null");
+          showToast(
+            title: "Booking failed",
+            description: "Could not create booking. Please try again.",
+          );
+          return; // Exit early, don't attempt payment
+        }
+
+        // Check if response contains necessary payment data
+        final stripeClientSecret = response["stripe_client_secret"];
+        final stripePaymentIntentId = response["stripe_payment_intent_id"];
+
+        if (stripeClientSecret == null || stripePaymentIntentId == null) {
+          print(
+              "Booking created but payment setup failed - missing Stripe data");
+          showToast(
+            title: "Payment setup failed",
+            description:
+                "Booking was created but payment could not be processed. Please contact support.",
+          );
+          return; // Exit early, don't attempt payment
+        }
+
+        print("Payment Intent ID: $stripePaymentIntentId");
+        print("Client Secret: $stripeClientSecret");
+
+        // Process Stripe payment
+        final paymentSuccess = await _processStripePayment(stripeClientSecret);
+
+        if (paymentSuccess) {
+          // Payment succeeded - show success page
           Navigator.pop(context); // Close payment modal
           setState(() {
             showSuccessPage = true;
           });
+
+          // Show success toast using Nylo's showToast
+          showToast(
+            title: "Booking confirmed!",
+            description: "Your appointment has been booked successfully.",
+          );
         } else {
-          // Handle error (show error message)
-          showToast(title: "Booking failed.", description: "Please try again.");
+          // Payment failed - show error but don't navigate to success
+          // The _processStripePayment method will handle showing specific error messages
+          print("Payment failed - staying on current page");
         }
       } catch (e) {
-        // Handle any errors
-        showToast(title: "Booking failed.", description: "Please try again.");
-        print(e.toString());
+        // Handle any errors during booking creation or payment processing
+        print("Error in booking/payment: $e");
+
+        // Show appropriate error message based on the type of error using Nylo's showToast
+        String errorTitle = "Booking failed";
+        String errorDescription = "An error occurred. Please try again.";
+
+        // Check if it's a network/API error
+        if (e.toString().contains('DioException') ||
+            e.toString().contains('400') ||
+            e.toString().contains('500')) {
+          errorTitle = "Server error";
+          errorDescription =
+              "There was a problem with the server. Please try again later.";
+        } else if (e.toString().contains('Stripe') ||
+            e.toString().contains('payment')) {
+          errorTitle = "Payment error";
+          errorDescription =
+              "There was a problem processing your payment. Please try again.";
+        }
+
+        showToast(
+          title: errorTitle,
+          description: errorDescription,
+        );
       } finally {
         // Update both states when done
         setModalState?.call(() {}); // Refresh modal state
         setState(() {}); // Refresh main widget state
       }
     });
+  }
+
+// Separate method to handle Stripe payment with proper error handling
+  // Enhanced Stripe payment processing with better error handling
+  Future<bool> _processStripePayment(String clientSecret) async {
+    // Check if Stripe is initialized
+    if (!isStripeInitialized ||
+        Stripe.publishableKey == null ||
+        Stripe.publishableKey!.isEmpty) {
+      print("Stripe not properly initialized");
+      showToast(
+        title: "Configuration error",
+        description: "Payment system is not ready. Please try again.",
+      );
+      return false;
+    }
+
+    try {
+      print(
+          "Starting Stripe payment process with client secret: ${clientSecret.substring(0, 20)}...");
+
+      // Initialize payment sheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'Labs by Shea',
+          style: ThemeMode.system,
+          appearance: PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Colors.black,
+            ),
+          ),
+          allowsDelayedPaymentMethods: true,
+          billingDetailsCollectionConfiguration:
+              const BillingDetailsCollectionConfiguration(
+            name: CollectionMode.always,
+            email: CollectionMode.always,
+          ),
+        ),
+      );
+
+      print("Payment sheet initialized successfully");
+
+      // Present payment sheet
+      await Stripe.instance.presentPaymentSheet();
+
+      // If we reach here, payment was successful
+      print("Payment completed successfully");
+      return true;
+    } on StripeException catch (e) {
+      print("Stripe error: ${e.error.localizedMessage}");
+
+      // Handle specific Stripe errors
+      switch (e.error.code) {
+        case FailureCode.Canceled:
+          showToast(
+            title: "Payment cancelled",
+            description:
+                "You cancelled the payment. Your booking was not completed.",
+          );
+          break;
+        case FailureCode.Failed:
+          showToast(
+            title: "Payment failed",
+            description:
+                "Your payment could not be processed. Please check your payment method and try again.",
+          );
+          break;
+        default:
+          showToast(
+            title: "Payment error",
+            description: e.error.localizedMessage ??
+                "An error occurred during payment. Please try again.",
+          );
+      }
+      return false;
+    } catch (e) {
+      print("General payment error: $e");
+
+      // Handle configuration errors specifically
+      if (e.toString().contains('StripeConfigException') ||
+          e.toString().contains('not initialized')) {
+        showToast(
+          title: "Configuration error",
+          description:
+              "Payment system is not properly configured. Please try restarting the app.",
+        );
+      } else if (e.toString().contains('network') ||
+          e.toString().contains('connection')) {
+        showToast(
+          title: "Network error",
+          description: "Please check your internet connection and try again.",
+        );
+      } else if (e.toString().contains('timeout')) {
+        showToast(
+          title: "Timeout error",
+          description: "Payment timed out. Please try again.",
+        );
+      } else {
+        showToast(
+          title: "Payment error",
+          description:
+              "An unexpected error occurred during payment. Please try again.",
+        );
+      }
+      return false;
+    }
+  }
+
+  // Helper method to show better toast messages
+  void showToasts({required String title, required String description}) {
+    // Use your app's toast/snackbar implementation
+    // This is a placeholder - replace with your actual toast implementation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            if (description.isNotEmpty)
+              Text(
+                description,
+                style: TextStyle(color: Colors.white),
+              ),
+          ],
+        ),
+        backgroundColor: title.toLowerCase().contains('success') ||
+                title.toLowerCase().contains('confirmed')
+            ? Colors.green
+            : Colors.red,
+        duration: Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _presentStripePaymentSheet(String clientSecret) async {
