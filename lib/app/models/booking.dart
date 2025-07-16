@@ -20,6 +20,21 @@ class Booking extends Model {
   Map<String, dynamic>? customer;
   Map<String, dynamic>? professional;
   Map<String, dynamic>? service;
+  String? addressLine1;
+  String? addressLine2;
+  String? city;
+  String? postalCode;
+  String? locationNotes;
+  double? baseAmount;
+  double? addonAmount;
+  double? discountAmount;
+  double? taxAmount;
+  double? depositAmount;
+  double? depositPercentage;
+  bool? depositRequired;
+  String? customerNotes;
+  String? professionalNotes;
+  String? confirmedAt;
   List<dynamic>? selectedAddons;
 
   Booking() : super(key: key);
@@ -33,7 +48,7 @@ class Booking extends Model {
     scheduledDate = data['scheduled_date'];
     scheduledTime = data['scheduled_time'];
     durationMinutes = data['duration_minutes'];
-    totalAmount = data['total_amount']?.toDouble();
+    totalAmount = _toDouble(data['total_amount']);
     status = data['status'];
     paymentStatus = data['payment_status'];
     isUpcoming = data['is_upcoming'];
@@ -42,7 +57,30 @@ class Booking extends Model {
     customer = data['customer'];
     professional = data['professional'];
     service = data['service'];
+    addressLine1 = data['address_line1'];
+    addressLine2 = data['address_line2'];
+    city = data['city'];
+    postalCode = data['postal_code'];
+    locationNotes = data['location_notes'];
+    baseAmount = _toDouble(data['base_amount']);
+    addonAmount = _toDouble(data['addon_amount']);
+    discountAmount = _toDouble(data['discount_amount']);
+    taxAmount = _toDouble(data['tax_amount']);
+    depositAmount = _toDouble(data['deposit_amount']);
+    depositPercentage = _toDouble(data['deposit_percentage']);
+    depositRequired = data['deposit_required'];
+    customerNotes = data['customer_notes'];
+    professionalNotes = data['professional_notes'];
+    confirmedAt = data['confirmed_at'];
     selectedAddons = data['selected_addons'];
+  }
+
+  static double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 
   @override
@@ -65,6 +103,21 @@ class Booking extends Model {
       'customer': customer,
       'professional': professional,
       'service': service,
+      'address_line1': addressLine1,
+      'address_line2': addressLine2,
+      'city': city,
+      'postal_code': postalCode,
+      'location_notes': locationNotes,
+      'base_amount': baseAmount,
+      'addon_amount': addonAmount,
+      'discount_amount': discountAmount,
+      'tax_amount': taxAmount,
+      'deposit_amount': depositAmount,
+      'deposit_percentage': depositPercentage,
+      'deposit_required': depositRequired,
+      'customer_notes': customerNotes,
+      'professional_notes': professionalNotes,
+      'confirmed_at': confirmedAt,
       'selected_addons': selectedAddons,
     };
   }

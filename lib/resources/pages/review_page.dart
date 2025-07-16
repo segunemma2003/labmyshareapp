@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -423,6 +424,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                   onPressed: () {
                     // Navigate to appointment details or calendar
                     Navigator.of(context).pop();
+                    routeTo(BaseNavigationHub.path, tabIndex: 2);
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.black),

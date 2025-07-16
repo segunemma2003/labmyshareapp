@@ -2,11 +2,12 @@ import 'package:flutter_app/app/networking/bookings_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/config/keys.dart';
+import '/app/models/booking.dart';
 
 class BookingService {
   static final BookingsApiService _api = BookingsApiService();
 
-  static Future<List<dynamic>?> getBookings({
+  static Future<List<Booking>> getBookings({
     String? status,
     String? paymentStatus,
     bool? upcoming,
@@ -14,16 +15,22 @@ class BookingService {
     String? dateTo,
   }) async {
     try {
-      return await _api.getBookings(
+      final response = await _api.getBookings(
         status: status,
         paymentStatus: paymentStatus,
         upcoming: upcoming,
         dateFrom: dateFrom,
         dateTo: dateTo,
       );
+      if (response != null && response is Map && response['results'] is List) {
+        return (response['results'] as List)
+            .map((e) => Booking.fromJson(e))
+            .toList();
+      }
+      return [];
     } catch (e) {
       print('Get bookings error: $e');
-      return null;
+      return [];
     }
   }
 

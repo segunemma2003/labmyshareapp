@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import '../../app/services/booking_service.dart';
+import '../../app/models/booking.dart';
+import '../pages/booking_details_page.dart';
 
 class BookingTab extends StatefulWidget {
   const BookingTab({super.key});
@@ -12,57 +15,30 @@ class _BookingTabState extends NyState<BookingTab>
     with TickerProviderStateMixin {
   late TabController _tabController;
 
-  // Sample data - replace with actual data from your backend
-  final List<AppointmentModel> openAppointments = [
-    // AppointmentModel(
-    //   date: "Thursday, 23 January 2025.",
-    //   time: "9:30am - 4:00pm",
-    //   duration: "6 hours",
-    //   price: 349,
-    //   paymentStatus: "Deposit",
-    //   servicesCount: 2,
-    //   bookingRef: "AB78IX55G",
-    // ),
-    // AppointmentModel(
-    //   date: "Friday, 24 January 2025.",
-    //   time: "9:30am - 4:00pm",
-    //   duration: "6 hours",
-    //   price: 520,
-    //   paymentStatus: "Full payment",
-    //   servicesCount: 2,
-    //   bookingRef: "AB78IX55G",
-    // ),
-  ];
-
-  final List<AppointmentModel> pendingAppointments = [
-    AppointmentModel(
-      date: "Thursday, 23 January 2025.",
-      time: "9:30am - 4:00pm",
-      duration: "6 hours",
-      price: 349,
-      paymentStatus: "Deposit",
-      servicesCount: 2,
-      bookingRef: "AB78IX55G",
-    ),
-  ];
-
-  final List<AppointmentModel> closedAppointments = List.generate(
-    5,
-    (index) => AppointmentModel(
-      date: "Thursday, 23 January 2025.",
-      time: "9:30am - 4:00pm",
-      duration: "6 hours",
-      price: 349,
-      paymentStatus: "Cleared",
-      servicesCount: 2,
-      bookingRef: "AB78IX55G",
-    ),
-  );
+  List<Booking> openAppointments = [];
+  List<Booking> pendingAppointments = [];
+  List<Booking> closedAppointments = [];
+  bool loading = true;
 
   @override
-  get init => () {
+  get init => () async {
         _tabController = TabController(length: 3, vsync: this);
+        await _loadBookings();
       };
+
+  Future<void> _loadBookings() async {
+    setState(() => loading = true);
+    openAppointments =
+        (await BookingService.getBookings(paymentStatus: "deposit_paid") ?? [])
+            .cast<Booking>();
+    pendingAppointments =
+        (await BookingService.getBookings(status: "pending") ?? [])
+            .cast<Booking>();
+    closedAppointments =
+        (await BookingService.getBookings(status: "completed") ?? [])
+            .cast<Booking>();
+    setState(() => loading = false);
+  }
 
   @override
   void dispose() {
@@ -72,6 +48,9 @@ class _BookingTabState extends NyState<BookingTab>
 
   @override
   Widget view(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -118,18 +97,25 @@ class _BookingTabState extends NyState<BookingTab>
     );
   }
 
-  Widget _buildAppointmentsList(
-      List<AppointmentModel> appointments, String type) {
+  Widget _buildAppointmentsList(List<Booking> appointments, String type) {
     if (appointments.isEmpty) {
       return _buildEmptyState(type);
     }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: appointments.length,
-      itemBuilder: (context, index) {
-        return _buildAppointmentCard(appointments[index]);
-      },
+    return RefreshIndicator(
+      onRefresh: _loadBookings,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: appointments.length,
+        itemBuilder: (context, index) {
+          return GestureDetector(
+            onTap: () {
+              routeTo('/booking-details',
+                  data: {"bookingId": appointments[index].bookingId!});
+            },
+            child: _buildAppointmentCard(appointments[index]),
+          );
+        },
+      ),
     );
   }
 
@@ -210,7 +196,7 @@ class _BookingTabState extends NyState<BookingTab>
     );
   }
 
-  Widget _buildAppointmentCard(AppointmentModel appointment) {
+  Widget _buildAppointmentCard(Booking booking) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -232,7 +218,7 @@ class _BookingTabState extends NyState<BookingTab>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      appointment.date,
+                      booking.scheduledDate ?? '',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -241,7 +227,7 @@ class _BookingTabState extends NyState<BookingTab>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "${appointment.time} • ${appointment.duration}",
+                      "${booking.scheduledTime ?? ''} • ${booking.durationMinutes ?? ''} min",
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -251,7 +237,7 @@ class _BookingTabState extends NyState<BookingTab>
                 ),
               ),
               Text(
-                "£${appointment.price}",
+                "£${booking.totalAmount?.toStringAsFixed(0) ?? ''}",
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -260,9 +246,7 @@ class _BookingTabState extends NyState<BookingTab>
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           // Payment status and booking details
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,11 +254,11 @@ class _BookingTabState extends NyState<BookingTab>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getPaymentStatusColor(appointment.paymentStatus),
+                  color: _getPaymentStatusColor(booking.paymentStatus ?? ''),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  appointment.paymentStatus,
+                  booking.paymentStatus ?? '',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -286,14 +270,14 @@ class _BookingTabState extends NyState<BookingTab>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "${appointment.servicesCount} services",
+                    booking.serviceName ?? '',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
                     ),
                   ),
                   Text(
-                    "Booking Ref: ${appointment.bookingRef}",
+                    "Booking Ref: ${booking.bookingId ?? ''}",
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey.shade600,
@@ -310,9 +294,9 @@ class _BookingTabState extends NyState<BookingTab>
 
   Color _getPaymentStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case "deposit":
+      case "deposit_paid":
         return Colors.orange;
-      case "full payment":
+      case "fully_paid":
         return Colors.green;
       case "cleared":
         return Colors.grey;
@@ -320,24 +304,4 @@ class _BookingTabState extends NyState<BookingTab>
         return Colors.blue;
     }
   }
-}
-
-class AppointmentModel {
-  final String date;
-  final String time;
-  final String duration;
-  final int price;
-  final String paymentStatus;
-  final int servicesCount;
-  final String bookingRef;
-
-  AppointmentModel({
-    required this.date,
-    required this.time,
-    required this.duration,
-    required this.price,
-    required this.paymentStatus,
-    required this.servicesCount,
-    required this.bookingRef,
-  });
 }

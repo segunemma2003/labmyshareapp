@@ -1,3 +1,4 @@
+import '/resources/pages/booking_details_page.dart';
 import '/resources/pages/select_time_page.dart';
 import '/resources/pages/reset_password_o_t_p_page.dart';
 import '/resources/pages/forgot_password_page.dart';
@@ -86,4 +87,5 @@ appRouter() => nyRoutes((router) {
       router.add(ForgotPasswordPage.path);
       router.add(ResetPasswordOTPPage.path);
       router.add(SelectTimePage.path);
+  router.add(BookingDetailsPage.path);
 });
