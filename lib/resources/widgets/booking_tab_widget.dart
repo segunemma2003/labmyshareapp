@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/resources/pages/booking_details_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '../../app/services/booking_service.dart';
 import '../../app/models/booking.dart';
-import '../pages/booking_details_page.dart';
 
 class BookingTab extends StatefulWidget {
   const BookingTab({super.key});
@@ -19,6 +19,7 @@ class _BookingTabState extends NyState<BookingTab>
   List<Booking> pendingAppointments = [];
   List<Booking> closedAppointments = [];
   bool loading = true;
+  String? error;
 
   @override
   get init => () async {
@@ -27,17 +28,36 @@ class _BookingTabState extends NyState<BookingTab>
       };
 
   Future<void> _loadBookings() async {
-    setState(() => loading = true);
-    openAppointments =
-        (await BookingService.getBookings(paymentStatus: "deposit_paid") ?? [])
-            .cast<Booking>();
-    pendingAppointments =
-        (await BookingService.getBookings(status: "pending") ?? [])
-            .cast<Booking>();
-    closedAppointments =
-        (await BookingService.getBookings(status: "completed") ?? [])
-            .cast<Booking>();
-    setState(() => loading = false);
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
+    try {
+      // Load bookings with proper error handling
+      final futures = await Future.wait([
+        BookingService.getBookings(paymentStatus: "deposit_paid"),
+        BookingService.getBookings(status: "pending"),
+        BookingService.getBookings(status: "completed"),
+      ]);
+
+      setState(() {
+        openAppointments = futures[0];
+        pendingAppointments = futures[1];
+        closedAppointments = futures[2];
+        loading = false;
+      });
+
+      print('Loaded ${openAppointments.length} open appointments');
+      print('Loaded ${pendingAppointments.length} pending appointments');
+      print('Loaded ${closedAppointments.length} closed appointments');
+    } catch (e) {
+      setState(() {
+        error = 'Failed to load bookings: $e';
+        loading = false;
+      });
+      print('Error loading bookings: $e');
+    }
   }
 
   @override
@@ -48,9 +68,6 @@ class _BookingTabState extends NyState<BookingTab>
 
   @override
   Widget view(BuildContext context) {
-    if (loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -79,20 +96,60 @@ class _BookingTabState extends NyState<BookingTab>
             fontSize: 16,
             fontWeight: FontWeight.normal,
           ),
-          tabs: const [
-            Tab(text: "Open"),
-            Tab(text: "Pending"),
-            Tab(text: "Closed"),
+          tabs: [
+            Tab(text: "Open (${openAppointments.length})"),
+            Tab(text: "Pending (${pendingAppointments.length})"),
+            Tab(text: "Closed (${closedAppointments.length})"),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildAppointmentsList(openAppointments, "upcoming"),
-          _buildAppointmentsList(pendingAppointments, "pending"),
-          _buildAppointmentsList(closedAppointments, "closed"),
-        ],
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null
+              ? _buildErrorState()
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildAppointmentsList(openAppointments, "upcoming"),
+                    _buildAppointmentsList(pendingAppointments, "pending"),
+                    _buildAppointmentsList(closedAppointments, "closed"),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red.shade300,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              error ?? 'Something went wrong',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadBookings,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B4513),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -109,8 +166,7 @@ class _BookingTabState extends NyState<BookingTab>
         itemBuilder: (context, index) {
           return GestureDetector(
             onTap: () {
-              routeTo('/booking-details',
-                  data: {"bookingId": appointments[index].bookingId!});
+              _navigateToBookingDetails(appointments[index]);
             },
             child: _buildAppointmentCard(appointments[index]),
           );
@@ -119,21 +175,39 @@ class _BookingTabState extends NyState<BookingTab>
     );
   }
 
+  void _navigateToBookingDetails(Booking booking) {
+    if (booking.bookingId != null) {
+      routeTo(BookingDetailsPage.path, data: {"bookingId": booking.bookingId!});
+    } else {
+      // Show error snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot open booking details - missing booking ID'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Widget _buildEmptyState(String type) {
     String title;
+    String subtitle;
     IconData iconData;
 
     switch (type) {
       case "pending":
-        title = "You have no pending\nappointments.";
+        title = "No Pending Appointments";
+        subtitle = "You have no appointments awaiting confirmation.";
         iconData = Icons.schedule;
         break;
       case "closed":
-        title = "You have no closed appointments\nnow.";
-        iconData = Icons.close;
+        title = "No Closed Appointments";
+        subtitle = "You have no completed appointments yet.";
+        iconData = Icons.check_circle_outline;
         break;
       default:
-        title = "You have no upcoming\nappointments.";
+        title = "No Upcoming Appointments";
+        subtitle = "You have no confirmed appointments scheduled.";
         iconData = Icons.event_available;
     }
 
@@ -163,6 +237,15 @@ class _BookingTabState extends NyState<BookingTab>
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
                 height: 1.3,
               ),
               textAlign: TextAlign.center,
@@ -182,7 +265,7 @@ class _BookingTabState extends NyState<BookingTab>
                 ),
               ),
               child: const Text(
-                "Book now",
+                "Book Appointment",
                 style: TextStyle(
                   color: Colors.black,
                   fontSize: 16,
@@ -204,11 +287,18 @@ class _BookingTabState extends NyState<BookingTab>
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with date and price
+          // Header with service name and price
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,7 +308,7 @@ class _BookingTabState extends NyState<BookingTab>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      booking.scheduledDate ?? '',
+                      booking.serviceName ?? 'Unknown Service',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -226,64 +316,123 @@ class _BookingTabState extends NyState<BookingTab>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      "${booking.scheduledTime ?? ''} • ${booking.durationMinutes ?? ''} min",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
+                    if (booking.professionalName?.isNotEmpty == true)
+                      Text(
+                        "with ${booking.professionalName}",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
                   ],
-                ),
-              ),
-              Text(
-                "£${booking.totalAmount?.toStringAsFixed(0) ?? ''}",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Payment status and booking details
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getPaymentStatusColor(booking.paymentStatus ?? ''),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  booking.paymentStatus ?? '',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    booking.serviceName ?? '',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                    "£${booking.totalAmount?.toStringAsFixed(0) ?? '0'}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
-                  Text(
-                    "Booking Ref: ${booking.bookingId ?? ''}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
+                  if (booking.paymentStatus != null)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: BookingService.getPaymentStatusColor(
+                            booking.paymentStatus!),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        BookingService.getPaymentStatusDisplayText(
+                            booking.paymentStatus!),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
                 ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Date and time information
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: 16,
+                color: Colors.grey.shade600,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _formatDate(booking.scheduledDate),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(
+                Icons.access_time,
+                size: 16,
+                color: Colors.grey.shade600,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "${_formatTime(booking.scheduledTime)} • ${booking.durationMinutes ?? 0} min",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Status and booking reference
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (booking.status != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: BookingService.getStatusColor(booking.status!)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: BookingService.getStatusColor(booking.status!),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    BookingService.getStatusDisplayText(booking.status!),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: BookingService.getStatusColor(booking.status!),
+                    ),
+                  ),
+                ),
+              Text(
+                "Ref: ${_formatBookingRef(booking.bookingId)}",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  fontFamily: 'monospace',
+                ),
               ),
             ],
           ),
@@ -292,16 +441,72 @@ class _BookingTabState extends NyState<BookingTab>
     );
   }
 
-  Color _getPaymentStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case "deposit_paid":
-        return Colors.orange;
-      case "fully_paid":
-        return Colors.green;
-      case "cleared":
-        return Colors.grey;
-      default:
-        return Colors.blue;
+  String _formatDate(String? date) {
+    if (date == null) return 'No date';
+    try {
+      final parsedDate = DateTime.parse(date);
+      final now = DateTime.now();
+      final difference = parsedDate.difference(now).inDays;
+
+      if (difference == 0) {
+        return 'Today';
+      } else if (difference == 1) {
+        return 'Tomorrow';
+      } else if (difference == -1) {
+        return 'Yesterday';
+      } else {
+        final weekday = [
+          'Mon',
+          'Tue',
+          'Wed',
+          'Thu',
+          'Fri',
+          'Sat',
+          'Sun'
+        ][parsedDate.weekday - 1];
+        final month = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ][parsedDate.month - 1];
+        return '$weekday, $month ${parsedDate.day}';
+      }
+    } catch (e) {
+      return date;
     }
+  }
+
+  String _formatTime(String? time) {
+    if (time == null) return 'No time';
+    try {
+      final parts = time.split(':');
+      if (parts.length >= 2) {
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+        return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+      }
+    } catch (e) {
+      // Fall back to original string
+    }
+    return time;
+  }
+
+  String _formatBookingRef(String? bookingId) {
+    if (bookingId == null) return 'N/A';
+    // Show only the first 8 characters of the UUID
+    return bookingId.length > 8
+        ? bookingId.substring(0, 8).toUpperCase()
+        : bookingId.toUpperCase();
   }
 }

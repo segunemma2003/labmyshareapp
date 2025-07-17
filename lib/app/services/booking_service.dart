@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_app/app/networking/bookings_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
@@ -22,15 +23,48 @@ class BookingService {
         dateFrom: dateFrom,
         dateTo: dateTo,
       );
-      if (response != null && response is Map && response['results'] is List) {
-        return (response['results'] as List)
-            .map((e) => Booking.fromJson(e))
-            .toList();
+
+      print('Raw API response: $response');
+      print('Response type: ${response.runtimeType}');
+
+      if (response != null) {
+        // Handle paginated response structure
+        if (response is Map<String, dynamic> &&
+            response.containsKey('results')) {
+          final results = response['results'];
+          if (results is List) {
+            return results.map((e) => Booking.fromJson(e)).toList();
+          }
+        }
+        // Handle direct list response (fallback)
+        else if (response is List) {
+          return (response as List).map((e) => Booking.fromJson(e)).toList();
+        }
       }
+
+      print('No valid booking data found in response');
       return [];
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('Get bookings error: $e');
+      print('Stack trace: $stackTrace');
       return [];
+    }
+  }
+
+  static Future<Booking?> getBookingDetails({required String bookingId}) async {
+    try {
+      final response = await _api.getBooking(bookingId: bookingId);
+
+      print('Booking details response: $response');
+
+      if (response != null) {
+        return Booking.fromJson(response);
+      }
+      return null;
+    } catch (e, stackTrace) {
+      print('Get booking details error: $e');
+      print('Stack trace: $stackTrace');
+      return null;
     }
   }
 
@@ -80,16 +114,6 @@ class BookingService {
       return result;
     } catch (e) {
       print('Create booking error: $e');
-      return null;
-    }
-  }
-
-  static Future<Map<String, dynamic>?> getBooking(
-      {required String bookingId}) async {
-    try {
-      return await _api.getBooking(bookingId: bookingId);
-    } catch (e) {
-      print('Get booking error: $e');
       return null;
     }
   }
@@ -189,5 +213,82 @@ class BookingService {
 
   static Future<void> clearBookingDraft() async {
     await Keys.bookingDraft.flush();
+  }
+
+  // Helper methods for booking status
+  static String getStatusDisplayText(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending Confirmation';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'in_progress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'rescheduled':
+        return 'Rescheduled';
+      case 'no_show':
+        return 'No Show';
+      default:
+        return status;
+    }
+  }
+
+  static String getPaymentStatusDisplayText(String paymentStatus) {
+    switch (paymentStatus.toLowerCase()) {
+      case 'pending':
+        return 'Payment Pending';
+      case 'deposit_paid':
+        return 'Deposit Paid';
+      case 'fully_paid':
+        return 'Fully Paid';
+      case 'refunded':
+        return 'Refunded';
+      case 'failed':
+        return 'Payment Failed';
+      default:
+        return paymentStatus;
+    }
+  }
+
+  static Color getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'in_progress':
+        return Colors.purple;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      case 'rescheduled':
+        return Colors.amber;
+      case 'no_show':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  static Color getPaymentStatusColor(String paymentStatus) {
+    switch (paymentStatus.toLowerCase()) {
+      case 'deposit_paid':
+        return Colors.orange;
+      case 'fully_paid':
+        return Colors.green;
+      case 'pending':
+        return Colors.amber;
+      case 'failed':
+        return Colors.red;
+      case 'refunded':
+        return Colors.grey;
+      default:
+        return Colors.blue;
+    }
   }
 }

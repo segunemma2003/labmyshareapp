@@ -28,7 +28,7 @@ class BookingsApiService extends NyApiService {
         RegionInterceptor: RegionInterceptor(),
       };
 
-  Future<List<dynamic>?> getBookings({
+  Future<Map<String, dynamic>?> getBookings({
     String? status,
     String? paymentStatus,
     bool? upcoming,
@@ -42,10 +42,22 @@ class BookingsApiService extends NyApiService {
     if (dateFrom != null) queryParams['date_from'] = dateFrom;
     if (dateTo != null) queryParams['date_to'] = dateTo;
 
-    return await network(
-      request: (request) =>
-          request.get("/bookings/", queryParameters: queryParams),
-    );
+    try {
+      final response = await network(
+        request: (request) =>
+            request.get("/bookings/", queryParameters: queryParams),
+      );
+
+      print('BookingsApiService.getBookings raw response: $response');
+      print('Response type: ${response.runtimeType}');
+
+      // Return the entire response - let the service layer handle the structure
+      return response as Map<String, dynamic>?;
+    } catch (e, stackTrace) {
+      print('BookingsApiService.getBookings error: $e');
+      print('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> createBooking({
@@ -86,15 +98,29 @@ class BookingsApiService extends NyApiService {
     if (locationNotes != null) data["location_notes"] = locationNotes;
     if (customerNotes != null) data["customer_notes"] = customerNotes;
     if (selectedAddons != null) data["selected_addons"] = selectedAddons;
-    return await network(
-      request: (request) => request.post("/bookings/create/", data: data),
-    );
+
+    try {
+      return await network(
+        request: (request) => request.post("/bookings/create/", data: data),
+      );
+    } catch (e) {
+      print('BookingsApiService.createBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> getBooking({required String bookingId}) async {
-    return await network(
-      request: (request) => request.get("/bookings/$bookingId/"),
-    );
+    try {
+      final response = await network(
+        request: (request) => request.get("/bookings/$bookingId/"),
+      );
+
+      print('BookingsApiService.getBooking response: $response');
+      return response as Map<String, dynamic>?;
+    } catch (e) {
+      print('BookingsApiService.getBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> updateBooking({
@@ -112,21 +138,32 @@ class BookingsApiService extends NyApiService {
     if (city != null) data["city"] = city;
     if (customerNotes != null) data["customer_notes"] = customerNotes;
 
-    return await network(
-      request: (request) =>
-          request.put("/bookings/$bookingId/update/", data: data),
-    );
+    try {
+      return await network(
+        request: (request) =>
+            request.put("/bookings/$bookingId/update/", data: data),
+      );
+    } catch (e) {
+      print('BookingsApiService.updateBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> cancelBooking({
     required String bookingId,
     required String reason,
   }) async {
-    return await network(
-      request: (request) => request.post("/bookings/$bookingId/cancel/", data: {
-        "reason": reason,
-      }),
-    );
+    try {
+      return await network(
+        request: (request) =>
+            request.post("/bookings/$bookingId/cancel/", data: {
+          "reason": reason,
+        }),
+      );
+    } catch (e) {
+      print('BookingsApiService.cancelBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> rescheduleBooking({
@@ -135,14 +172,19 @@ class BookingsApiService extends NyApiService {
     required String requestedTime,
     required String reason,
   }) async {
-    return await network(
-      request: (request) =>
-          request.post("/bookings/$bookingId/reschedule/", data: {
-        "requested_date": requestedDate,
-        "requested_time": requestedTime,
-        "reason": reason,
-      }),
-    );
+    try {
+      return await network(
+        request: (request) =>
+            request.post("/bookings/$bookingId/reschedule/", data: {
+          "requested_date": requestedDate,
+          "requested_time": requestedTime,
+          "reason": reason,
+        }),
+      );
+    } catch (e) {
+      print('BookingsApiService.rescheduleBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> reviewBooking({
@@ -154,33 +196,49 @@ class BookingsApiService extends NyApiService {
     required String comment,
     required bool wouldRecommend,
   }) async {
-    return await network(
-      request: (request) => request.post("/bookings/$bookingId/review/", data: {
-        "overall_rating": overallRating,
-        "service_rating": serviceRating,
-        "professional_rating": professionalRating,
-        "value_rating": valueRating,
-        "comment": comment,
-        "would_recommend": wouldRecommend,
-      }),
-    );
+    try {
+      return await network(
+        request: (request) =>
+            request.post("/bookings/$bookingId/review/", data: {
+          "overall_rating": overallRating,
+          "service_rating": serviceRating,
+          "professional_rating": professionalRating,
+          "value_rating": valueRating,
+          "comment": comment,
+          "would_recommend": wouldRecommend,
+        }),
+      );
+    } catch (e) {
+      print('BookingsApiService.reviewBooking error: $e');
+      rethrow;
+    }
   }
 
   Future<List<dynamic>?> getBookingMessages({required String bookingId}) async {
-    return await network(
-      request: (request) => request.get("/bookings/$bookingId/messages/"),
-    );
+    try {
+      return await network(
+        request: (request) => request.get("/bookings/$bookingId/messages/"),
+      );
+    } catch (e) {
+      print('BookingsApiService.getBookingMessages error: $e');
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>?> sendBookingMessage({
     required String bookingId,
     required String message,
   }) async {
-    return await network(
-      request: (request) =>
-          request.post("/bookings/$bookingId/messages/", data: {
-        "message": message,
-      }),
-    );
+    try {
+      return await network(
+        request: (request) =>
+            request.post("/bookings/$bookingId/messages/", data: {
+          "message": message,
+        }),
+      );
+    } catch (e) {
+      print('BookingsApiService.sendBookingMessage error: $e');
+      rethrow;
+    }
   }
 }
