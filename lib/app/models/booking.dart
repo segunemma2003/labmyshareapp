@@ -43,7 +43,7 @@ class Booking extends Model {
     bookingId = data['booking_id'];
     customerName = data['customer_name'];
     professionalName = data['professional_name'];
-    serviceName = data['service_name'];
+    serviceName = data['service_name'] ?? data['service']['name'];
     regionName = data['region_name'];
     scheduledDate = data['scheduled_date'];
     scheduledTime = data['scheduled_time'];

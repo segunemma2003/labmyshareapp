@@ -17,11 +17,6 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
 
   @override
   get init => () async {
-        /// Uncomment the code below to fetch the number of stars for the Nylo repository
-        // Map<String, dynamic>? githubResponse = await api<ApiService>(
-        //         (request) => request.githubInfo(),
-        // );
-        // _stars = githubResponse?["stargazers_count"];
         await _loadBookingDetails();
       };
 
@@ -125,6 +120,388 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
     return bookingId.length > 8
         ? bookingId.substring(0, 8).toUpperCase()
         : bookingId.toUpperCase();
+  }
+
+  void _showManageAppointmentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _buildManageAppointmentSheet(),
+    );
+  }
+
+  Widget _buildManageAppointmentSheet() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Manage Appointment',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Appointment details
+          Text(
+            _formatDate(booking!.scheduledDate),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${_formatTime(booking!.scheduledTime)} - ${_calculateEndTime(booking!.scheduledTime, booking!.durationMinutes)}   •   ${_formatDuration(booking!.durationMinutes)}',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Reschedule option
+          _buildManageOption(
+            icon: Icons.schedule,
+            title: 'Reschedule appointment',
+            onTap: () {
+              Navigator.pop(context);
+              _handleReschedule();
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Cancel option
+          _buildManageOption(
+            icon: Icons.cancel_outlined,
+            title: 'Cancel Appointment',
+            onTap: () {
+              Navigator.pop(context);
+              _showCancelConfirmation();
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManageOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 24,
+              color: Colors.black87,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCancelConfirmation() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _buildCancelConfirmationSheet(),
+    );
+  }
+
+  Widget _buildCancelConfirmationSheet() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Cancel Appointment',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Appointment details
+          Text(
+            _formatDate(booking!.scheduledDate),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${_formatTime(booking!.scheduledTime)} - ${_calculateEndTime(booking!.scheduledTime, booking!.durationMinutes)}   •   ${_formatDuration(booking!.durationMinutes)}',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Warning text
+          const Text(
+            'You can reschedule your appointment if you wish to change the time.',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          const Text(
+            'Are you sure you want to cancel your appointment?',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Cancel button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _handleCancel();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Cancel Appointment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleCancel() async {
+    if (booking?.bookingId == null) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      final success = await BookingService.cancelBooking(
+        bookingId: booking!.bookingId!,
+        reason: 'Cancelled by customer',
+      );
+
+      // Hide loading
+      Navigator.pop(context);
+
+      if (success) {
+        _showSuccessPage('cancelled');
+      } else {
+        showToast(
+          title: "Error",
+          description: "Failed to cancel appointment. Please try again.",
+          style: ToastNotificationStyleType.danger,
+        );
+      }
+    } catch (e) {
+      // Hide loading
+      Navigator.pop(context);
+      showToast(
+        title: "Error",
+        description: "Failed to cancel appointment: $e",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
+  }
+
+  Future<void> _handleReschedule() async {
+    if (booking?.bookingId == null) return;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // For now, we'll use placeholder values - in real app, you'd show a date/time picker
+      final success = await BookingService.rescheduleBooking(
+        bookingId: booking!.bookingId!,
+        requestedDate:
+            booking!.scheduledDate ?? DateTime.now().toIso8601String(),
+        requestedTime: booking!.scheduledTime ?? '09:00:00',
+        reason: 'Rescheduled by customer',
+      );
+
+      // Hide loading
+      Navigator.pop(context);
+
+      if (success) {
+        _showSuccessPage('rescheduled');
+      } else {
+        showToast(
+          title: "Error",
+          description: "Failed to reschedule appointment. Please try again.",
+          style: ToastNotificationStyleType.danger,
+        );
+      }
+    } catch (e) {
+      // Hide loading
+      Navigator.pop(context);
+      showToast(
+        title: "Error",
+        description: "Failed to reschedule appointment: $e",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
+  }
+
+  void _showSuccessPage(String action) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Success icon
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.event_available,
+                  size: 48,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Success message
+              Text(
+                'You have successfully ${action} your appointment.',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+
+              // Go to appointments button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Go back to appointments
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.black),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Go to appointments',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -253,11 +630,12 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
                 title: 'Manage appointment',
                 subtitle: 'Get personal reminders',
                 onTap: () {
-                  showToast(
-                    title: "Appointment Management",
-                    description: "This feature will be available soon",
-                    style: ToastNotificationStyleType.info,
-                  );
+                  _showManageAppointmentSheet();
+                  // showToast(
+                  //   title: "Appointment Management",
+                  //   description: "This feature will be available soon",
+                  //   style: ToastNotificationStyleType.info,
+                  // );
                 },
               ),
               const SizedBox(height: 32),
@@ -341,7 +719,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 32),
 
               // Booking reference
               Text(
