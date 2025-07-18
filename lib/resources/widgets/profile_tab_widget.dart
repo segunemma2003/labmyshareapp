@@ -17,26 +17,55 @@ class _ProfileTabState extends NyState<ProfileTab> {
   String? _errorMessage;
 
   @override
-  boot() async {
-    await _loadUserData();
-  }
+  get init => () async {
+        await _loadUserData();
+      };
 
   Future<void> _loadUserData() async {
     try {
       setLoading(true, name: 'user_data');
+      print('ProfileTab: Starting to load user data...');
 
-      final user = await AuthService.getCurrentUser();
-      print("User loaded: $user");
-      print("User data: ${user?.toJson()}");
+      // First check if user is authenticated
+      final isAuth = await AuthService.isAuthenticated();
+      print('ProfileTab: User authenticated: $isAuth');
+
+      if (!isAuth) {
+        print('ProfileTab: User not authenticated');
+        if (mounted) {
+          setState(() {
+            _user = null;
+            _errorMessage = null;
+          });
+        }
+        return;
+      }
+
+      // Get current user
+      User? userData = await AuthService.getCurrentUser();
+      print(userData);
+
+      // print('ProfileTab: Retrieved user: $user');
+
+      // print('ProfileTab: User details:');
+      // print('  - ID: ${user.id}');
+      // print('  - Email: ${user.email}');
+      // print('  - First Name: ${user.firstName}');
+      // print('  - Last Name: ${user.lastName}');
+      // print('  - Full Name: ${user.fullName}');
+      // print('  - Profile Picture: ${user.profilePicture}');
+      // print('  - Current Region: ${user.currentRegion?.name}');
 
       if (mounted) {
         setState(() {
-          _user = user;
+          _user = userData;
           _errorMessage = null;
         });
       }
-    } catch (e) {
-      print("Error loading user: $e");
+    } catch (e, stackTrace) {
+      print('ProfileTab: Error loading user: $e');
+      print('ProfileTab: Stack trace: $stackTrace');
+
       if (mounted) {
         setState(() {
           _errorMessage = "Failed to load user data: $e";
@@ -56,9 +85,12 @@ class _ProfileTabState extends NyState<ProfileTab> {
     if (pickedFile != null) {
       try {
         setLoading(true, name: 'profile_picture');
+        print('ProfileTab: Updating profile picture...');
 
         bool success =
             await AuthService.updateProfileImage(imagePath: pickedFile.path);
+        print('ProfileTab: Profile picture update success: $success');
+
         if (success) {
           // Reload user data after successful update
           await _loadUserData();
@@ -75,7 +107,7 @@ class _ProfileTabState extends NyState<ProfileTab> {
           );
         }
       } catch (e) {
-        print("Error updating profile picture: $e");
+        print("ProfileTab: Error updating profile picture: $e");
         showToast(
           title: "Error",
           description: "Failed to update profile picture.",
@@ -234,7 +266,7 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF8B4513),
+                  color: Color(0xFF985F5F),
                 ),
               ),
 
@@ -247,6 +279,20 @@ class _ProfileTabState extends NyState<ProfileTab> {
                     color: Colors.grey.shade600,
                   ),
                 ),
+
+              // Debug info (remove in production)
+              // if (_user != null)
+              //   Padding(
+              //     padding: const EdgeInsets.only(top: 8),
+              //     child: Text(
+              //       'Debug: User ID: ${_user!.id}, Email: ${_user!.email}',
+              //       style: TextStyle(
+              //         fontSize: 10,
+              //         color: Colors.grey.shade400,
+              //       ),
+              //       textAlign: TextAlign.center,
+              //     ),
+              //   ),
             ],
           ),
 
@@ -322,14 +368,48 @@ class _ProfileTabState extends NyState<ProfileTab> {
           ),
 
           const SizedBox(height: 40),
+
+          // Debug section (remove in production)
+          if (_user != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Debug Info:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Full Name: ${_user!.fullName}'),
+                  Text('First Name: ${_user!.firstName}'),
+                  Text('Last Name: ${_user!.lastName}'),
+                  Text('Email: ${_user!.email}'),
+                  Text('Profile Completed: ${_user!.profileCompleted}'),
+                  Text(
+                      'Current Region: ${_user!.currentRegion?.name ?? 'None'}'),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
   String _getDisplayName(User user) {
+    print('ProfileTab: Getting display name for user...');
+    print('  - Full Name: "${user.fullName}"');
+    print('  - First Name: "${user.firstName}"');
+    print('  - Last Name: "${user.lastName}"');
+    print('  - Email: "${user.email}"');
+
     // Use fullName if available
     if (user.fullName != null && user.fullName!.trim().isNotEmpty) {
+      print('  - Using fullName: "${user.fullName!.trim()}"');
       return user.fullName!.trim();
     }
 
@@ -337,10 +417,13 @@ class _ProfileTabState extends NyState<ProfileTab> {
     final firstName = user.firstName ?? '';
     final lastName = user.lastName ?? '';
     final fullName = "$firstName $lastName".trim();
+    print('  - Constructed name: "$fullName"');
 
     // If name is empty, return email or fallback
     if (fullName.isEmpty) {
-      return user.email ?? "Guest";
+      final fallback = user.email ?? "Guest";
+      print('  - Using fallback: "$fallback"');
+      return fallback;
     }
 
     return fullName;

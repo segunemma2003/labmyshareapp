@@ -19,6 +19,8 @@ class AuthService {
     required String confirmPassword,
   }) async {
     try {
+      // Flush old/corrupt token before registration
+      await flushAuthToken();
       final response = await _api.register(
         firstName: firstName,
         lastName: lastName,
@@ -28,10 +30,11 @@ class AuthService {
       );
 
       if (response != null && response['token'] != null) {
-        await Keys.auth.save(response['token']);
+        // Always save the token as a String
+        await Keys.auth.save(response['token'].toString());
         if (response['user'] != null) {
-          User user = User.fromJson(response['user']);
-          await Keys.userProfile.save(user.toJson());
+          final userData = Map<String, dynamic>.from(response['user']);
+          await Keys.userProfile.save(userData);
         }
         return true;
       }
@@ -83,42 +86,28 @@ class AuthService {
     }
   }
 
+  static Future<void> flushAuthToken() async {
+    await Keys.auth.flush();
+  }
+
   static Future<bool> login({
     required String email,
     required String password,
   }) async {
     try {
+      // Flush old/corrupt token before login
+      await flushAuthToken();
       final response = await _api.login(
         email: email,
         password: password,
       );
 
       if (response != null && response['token'] != null) {
-        await Keys.auth.save(response['token']);
+        // Always save the token as a String
+        await Keys.auth.save(response['token'].toString());
         if (response['user'] != null) {
-          try {
-            // Clean the user data before parsing
-            final userData = Map<String, dynamic>.from(response['user']);
-
-            // Handle empty gender
-            if (userData['gender'] == '') {
-              userData['gender'] = null;
-            }
-
-            print('Cleaned user data: $userData'); // Debug log
-
-            User user = User.fromJson(userData);
-            await Keys.userProfile.save(user.toJson());
-
-            // Save current region
-            if (userData['current_region'] != null) {
-              await Keys.currentRegion.save(userData['current_region']['code']);
-            }
-          } catch (parseError) {
-            print('User parsing error: $parseError');
-            // Still save the token even if user parsing fails
-            return true;
-          }
+          final userData = Map<String, dynamic>.from(response['user']);
+          await Keys.userProfile.save(userData);
         }
         return true;
       }
@@ -304,6 +293,18 @@ class AuthService {
     }
   }
 
+  static Future<void> clearRegionServiceCaches() async {
+    // Clear main service categories
+    await NyStorage.delete('service_categories');
+    // Example: clear for first 10 categories (adjust as needed)
+    for (int i = 1; i <= 10; i++) {
+      await NyStorage.delete('category_${i}_services');
+      await NyStorage.delete('category_${i}_addons');
+    }
+    cache().flush();
+    // Add more keys as needed for your app
+  }
+
   static Future<bool> switchRegion({required String regionCode}) async {
     try {
       final response = await _api.switchRegion(regionCode: regionCode);
@@ -316,10 +317,10 @@ class AuthService {
           await Keys.userProfile.save(user.toJson());
         }
 
-        // Clear region-specific caches
+        // Clear region/service/add-on caches
+        await clearRegionServiceCaches();
         await _notificationApi.clearServiceCache();
         await _notificationApi.clearProfessionalsCache();
-        // Clear all services/add-ons cache
         await ServicesApiService().clearCache();
         return true;
       }

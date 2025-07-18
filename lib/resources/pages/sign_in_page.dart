@@ -40,8 +40,13 @@ class _SignInPageState extends NyPage<SignInPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24.0,
+            right: 24.0,
+            top: 24.0,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -66,123 +71,110 @@ class _SignInPageState extends NyPage<SignInPage> {
               ),
               SizedBox(height: 32),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Continue with Google Button
-                      _buildSocialButton(
-                        icon: _buildGoogleIcon(),
-                        text: "Continue with Google",
-                        onPressed: _handleGoogleSignIn,
-                      ),
-                      SizedBox(height: 16),
+              // Social and form section
+              // Remove Expanded and SingleChildScrollView here
+              // Just use the Column directly
+              // Continue with Google Button
+              _buildSocialButton(
+                icon: _buildGoogleIcon(),
+                text: "Continue with Google",
+                onPressed: _handleGoogleSignIn,
+              ),
+              SizedBox(height: 16),
 
-                      // Continue with Apple Button
-                      _buildSocialButton(
-                        icon: Icon(Icons.apple, size: 24, color: Colors.black),
-                        text: "Continue with Apple",
-                        onPressed: _handleAppleSignIn,
-                      ),
-                      SizedBox(height: 32),
+              _buildSocialButton(
+                icon: Icon(Icons.apple, size: 24, color: Colors.black),
+                text: "Continue with Apple",
+                onPressed: _handleAppleSignIn,
+              ),
+              SizedBox(height: 32),
 
-                      // OR Divider
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              "OR",
-                              style: TextStyle(
-                                color: Colors.grey[500],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+              Row(
+                children: [
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      "OR",
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: Colors.grey[300])),
+                ],
+              ),
+              SizedBox(height: 32),
+
+              // Form
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel("Email"),
+                    _buildTextField(
+                      controller: _emailController,
+                      hintText: "example@email.com",
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(value.trim())) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    _buildLabel("Password"),
+                    _buildTextField(
+                      controller: _passwordController,
+                      hintText: "Enter password",
+                      obscureText: !_isPasswordVisible,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: _handleForgotPassword,
+                        child: Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
-                          Expanded(child: Divider(color: Colors.grey[300])),
-                        ],
-                      ),
-                      SizedBox(height: 32),
-
-                      // Form
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Email
-                            _buildLabel("Email"),
-                            _buildTextField(
-                              controller: _emailController,
-                              hintText: "example@email.com",
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(value.trim())) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 20),
-
-                            // Password
-                            _buildLabel("Password"),
-                            _buildTextField(
-                              controller: _passwordController,
-                              hintText: "Enter password",
-                              obscureText: !_isPasswordVisible,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
-                                  });
-                                },
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
-                                }
-                                return null;
-                              },
-                            ),
-                            SizedBox(height: 12),
-
-                            // Forgot Password
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: GestureDetector(
-                                onTap: _handleForgotPassword,
-                                child: Text(
-                                  "Forgot Password?",
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 32),
-                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 32),
+                  ],
                 ),
               ),
-
               // Sign In Button
               SizedBox(
                 width: double.infinity,
@@ -198,10 +190,9 @@ class _SignInPageState extends NyPage<SignInPage> {
                   ),
                   child: isLocked('signin')
                       ? SizedBox(
-                          height: 20,
-                          width: 20,
+                          width: 24,
+                          height: 24,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
                             valueColor:
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
@@ -217,35 +208,28 @@ class _SignInPageState extends NyPage<SignInPage> {
                 ),
               ),
               SizedBox(height: 24),
-
-              // Don't have account
-              Center(
-                child: RichText(
-                  text: TextSpan(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account? ",
                     style: TextStyle(
+                      color: Colors.grey[700],
                       fontSize: 14,
-                      color: Colors.grey[600],
                     ),
-                    children: [
-                      TextSpan(text: "Don't have an account? "),
-                      WidgetSpan(
-                        child: GestureDetector(
-                          onTap: () {
-                            routeTo(SignUpPage.path);
-                          },
-                          child: Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.blue,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
+                  GestureDetector(
+                    onTap: () => routeTo(SignUpPage.path),
+                    child: Text(
+                      "Sign up",
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -374,16 +358,16 @@ class _SignInPageState extends NyPage<SignInPage> {
           // Check if user is verified
           final user = await AuthService.getCurrentUser();
 
-          if (user != null && !(user.isVerified ?? false)) {
-            // User needs to verify email
-            showToastNotification(
-              context,
-              style: ToastNotificationStyleType.warning,
-              title: "Verify Email",
-              description: "Please verify your email to continue.",
-            );
-            return;
-          }
+          // if (user != null && !(user.isVerified ?? false)) {
+          //   // User needs to verify email
+          //   showToastNotification(
+          //     context,
+          //     style: ToastNotificationStyleType.warning,
+          //     title: "Verify Email",
+          //     description: "Please verify your email to continue.",
+          //   );
+          //   return;
+          // }
 
           // Check if user needs to select region
 

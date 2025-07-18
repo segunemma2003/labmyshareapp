@@ -18,6 +18,8 @@
 	<array>
 		<string>en</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+<string>BeautySpa By Shea needs camera access to let you take photos for your beauty treatments and track your progress.</string>
 	<key>CFBundleName</key>
 	<string>BeautySpa by Share</string>
 	<key>CFBundlePackageType</key>

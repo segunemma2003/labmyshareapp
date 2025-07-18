@@ -45,8 +45,13 @@ class _SignUpPageState extends NyPage<SignUpPage> {
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 24.0,
+            right: 24.0,
+            top: 24.0,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
@@ -62,147 +67,126 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                   ),
                 ),
                 SizedBox(height: 8),
-
                 // Subtitle
                 Text(
-                  "We just need a bit more information. Please enter your details and get started.",
+                  "We just need a bit more information to get you started.",
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey[600],
+                    color: Colors.grey,
                   ),
                 ),
                 SizedBox(height: 32),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // First Name
-                        _buildLabel("First name"),
-                        _buildTextField(
-                          controller: _firstNameController,
-                          hintText: "e.g John",
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your first name';
-                            }
-                            if (value.trim().length < 2) {
-                              return 'First name must be at least 2 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20),
-
-                        // Last Name
-                        _buildLabel("Last name"),
-                        _buildTextField(
-                          controller: _lastNameController,
-                          hintText: "e.g Doe",
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your last name';
-                            }
-                            if (value.trim().length < 2) {
-                              return 'Last name must be at least 2 characters';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20),
-
-                        // Email
-                        _buildLabel("Email"),
-                        _buildTextField(
-                          controller: _emailController,
-                          hintText: "example@email.com",
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                .hasMatch(value.trim())) {
-                              return 'Please enter a valid email address';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20),
-
-                        // Password
-                        _buildLabel("Password"),
-                        _buildTextField(
-                          controller: _passwordController,
-                          hintText: "Enter password",
-                          obscureText: !_isPasswordVisible,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            if (value.length < 8) {
-                              return 'Password must be at least 8 characters';
-                            }
-                            // Check for at least one letter and one number
-                            if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)')
-                                .hasMatch(value)) {
-                              return 'Password must contain at least one letter and one number';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 20),
-
-                        // Confirm Password
-                        _buildLabel("Confirm password"),
-                        _buildTextField(
-                          controller: _confirmPasswordController,
-                          hintText: "Re-enter password",
-                          obscureText: !_isConfirmPasswordVisible,
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _isConfirmPasswordVisible
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _isConfirmPasswordVisible =
-                                    !_isConfirmPasswordVisible;
-                              });
-                            },
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please confirm your password';
-                            }
-                            if (value != _passwordController.text) {
-                              return 'Passwords do not match';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: 32),
-                      ],
-                    ),
-                  ),
+                // Remove Expanded and SingleChildScrollView here
+                // Just use the Column directly
+                // First Name
+                _buildLabel("First name"),
+                _buildTextField(
+                  controller: _firstNameController,
+                  hintText: "e.g John",
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your first name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'First name must be at least 2 characters';
+                    }
+                    return null;
+                  },
                 ),
-
+                SizedBox(height: 20),
+                _buildLabel("Last name"),
+                _buildTextField(
+                  controller: _lastNameController,
+                  hintText: "e.g Doe",
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your last name';
+                    }
+                    if (value.trim().length < 2) {
+                      return 'Last name must be at least 2 characters';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                _buildLabel("Email"),
+                _buildTextField(
+                  controller: _emailController,
+                  hintText: "example@email.com",
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                        .hasMatch(value.trim())) {
+                      return 'Please enter a valid email address';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                _buildLabel("Password"),
+                _buildTextField(
+                  controller: _passwordController,
+                  hintText: "Enter password",
+                  obscureText: !_isPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isPasswordVisible = !_isPasswordVisible;
+                      });
+                    },
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a password';
+                    }
+                    if (value.length < 8) {
+                      return 'Password must be at least 8 characters';
+                    }
+                    if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d)').hasMatch(value)) {
+                      return 'Password must contain at least one letter and one number';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                _buildLabel("Confirm password"),
+                _buildTextField(
+                  controller: _confirmPasswordController,
+                  hintText: "Re-enter password",
+                  obscureText: !_isConfirmPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isConfirmPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                      });
+                    },
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please confirm your password';
+                    }
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 32),
                 // Sign Up Button
                 SizedBox(
                   width: double.infinity,

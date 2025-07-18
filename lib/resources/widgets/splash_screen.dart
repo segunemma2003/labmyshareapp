@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   /// Create a new instance of the MaterialApp
@@ -10,6 +10,19 @@ class SplashScreen extends StatelessWidget {
       home: SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
+  }
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      // Replace '/home' with your actual home route
+    });
   }
 
   @override

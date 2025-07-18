@@ -344,7 +344,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                             isSelected ? Color(0xFFE8C6B6) : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: isSelected
-                            ? Border.all(color: Color(0xFF8B4513), width: 2)
+                            ? Border.all(color: Color(0xFF985F5F), width: 2)
                             : null,
                       ),
                       child: Column(
@@ -356,7 +356,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color:
-                                  isSelected ? Color(0xFF8B4513) : Colors.black,
+                                  isSelected ? Color(0xFF985F5F) : Colors.black,
                             ),
                           ),
                           Text(
@@ -364,7 +364,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                             style: TextStyle(
                               fontSize: 12,
                               color:
-                                  isSelected ? Color(0xFF8B4513) : Colors.grey,
+                                  isSelected ? Color(0xFF985F5F) : Colors.grey,
                             ),
                           ),
                         ],
@@ -422,7 +422,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
               _fetchSlotsForDate(_selectedDate);
             },
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Color(0xFF8B4513)),
+              side: BorderSide(color: Color(0xFF985F5F)),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
@@ -430,9 +430,9 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Go to nearest available date',
-                    style: TextStyle(color: Color(0xFF8B4513))),
+                    style: TextStyle(color: Color(0xFF985F5F))),
                 SizedBox(width: 8),
-                Icon(Icons.arrow_forward, color: Color(0xFF8B4513)),
+                Icon(Icons.arrow_forward, color: Color(0xFF985F5F)),
               ],
             ),
           ),
@@ -460,7 +460,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
             decoration: BoxDecoration(
               color: isSelected ? Color(0xFFF5E6DE) : Colors.white,
               border: Border.all(
-                color: isSelected ? Color(0xFF8B4513) : Color(0xFFE0E0E0),
+                color: isSelected ? Color(0xFF985F5F) : Color(0xFFE0E0E0),
                 width: isSelected ? 2 : 1,
               ),
               borderRadius: BorderRadius.circular(12),
@@ -469,7 +469,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
               time,
               style: TextStyle(
                 fontSize: 16,
-                color: isSelected ? Color(0xFF8B4513) : Colors.black,
+                color: isSelected ? Color(0xFF985F5F) : Colors.black,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
