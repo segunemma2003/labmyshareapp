@@ -749,7 +749,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
         children: [
           Icon(
             icon,
-            color: const Color(0xFF8B4513),
+            color: const Color(0xFF985F5F),
             size: 24,
           ),
           const SizedBox(width: 12),

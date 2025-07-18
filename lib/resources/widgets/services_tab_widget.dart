@@ -6,6 +6,7 @@ import 'package:flutter_app/app/services/services_data_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
 import 'package:flutter_app/app/models/region.dart';
 import 'package:flutter_app/resources/pages/select_services_page.dart';
+import '/config/keys.dart';
 
 class ServicesTab extends StatefulWidget {
   const ServicesTab({super.key});
@@ -49,12 +50,19 @@ class _ServicesTabState extends NyState<ServicesTab> {
     try {
       final user = await AuthService.getCurrentUser();
       final regions = await RegionService.getRegions();
-      Region? currentRegion = user?.currentRegion;
-
+      String? currentRegionCode = await Keys.currentRegion.read();
+      Region? currentRegion;
+      if (currentRegionCode != null && regions != null) {
+        currentRegion = regions.firstWhere(
+          (r) => r.code == currentRegionCode,
+          orElse: () => regions.first,
+        );
+      }
       if (regions != null && regions.isNotEmpty) {
         setState(() {
           _regions = regions;
-          _selectedRegion = currentRegion ?? regions.first;
+          _selectedRegion =
+              currentRegion ?? user?.currentRegion ?? regions.first;
           _loadingRegions = false;
         });
         await _loadCategories();
@@ -111,14 +119,11 @@ class _ServicesTabState extends NyState<ServicesTab> {
   void _onCategoryChanged(ServiceCategory? category) {
     if (category != null) {
       setState(() => _selectedCategory = category);
-
-      // Navigate to SelectServicesPage with selected category
+      // Navigate to SelectServicesPage with selected categoryId
       try {
         print('Navigating to select-services with category: ${category.name}');
         routeTo(SelectServicesPage.path, data: {
-          'categories': _allCategories,
-          'initialCategory': category,
-          'activeCategory': category, // For backward compatibility
+          'categoryId': category.id,
         });
       } catch (e) {
         print('Navigation error: $e');
@@ -205,54 +210,54 @@ class _ServicesTabState extends NyState<ServicesTab> {
                   SizedBox(height: 16),
 
                   // Category Dropdown
-                  _loadingCategories
-                      ? const SizedBox(
-                          height: 56,
-                          child: Center(child: CircularProgressIndicator()))
-                      : _errorCategories
-                          ? Container(
-                              padding: EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.red.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.error, color: Colors.red),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                      child: Text('Failed to load categories')),
-                                  TextButton(
-                                    onPressed: _loadCategories,
-                                    child: Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: DropdownButton<ServiceCategory>(
-                                value: _selectedCategory,
-                                isExpanded: true,
-                                hint: Text('Select a category'),
-                                underline: SizedBox(),
-                                icon: Icon(Icons.keyboard_arrow_down),
-                                items: _allCategories.map((cat) {
-                                  return DropdownMenuItem<ServiceCategory>(
-                                    value: cat,
-                                    child: Text(
-                                      cat.name,
-                                      style: TextStyle(fontSize: 16),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: _onCategoryChanged,
-                              ),
-                            ),
+                  // _loadingCategories
+                  // ? const SizedBox(
+                  //     height: 56,
+                  //     child: Center(child: CircularProgressIndicator()))
+                  // : _errorCategories
+                  //     ? Container(
+                  //         padding: EdgeInsets.all(16),
+                  //         decoration: BoxDecoration(
+                  //           border: Border.all(color: Colors.red.shade300),
+                  //           borderRadius: BorderRadius.circular(8),
+                  //         ),
+                  //         child: Row(
+                  //           children: [
+                  //             Icon(Icons.error, color: Colors.red),
+                  //             SizedBox(width: 8),
+                  //             Expanded(
+                  //                 child: Text('Failed to load categories')),
+                  //             TextButton(
+                  //               onPressed: _loadCategories,
+                  //               child: Text('Retry'),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       )
+                  //     : Container(
+                  //         padding: EdgeInsets.symmetric(horizontal: 12),
+                  //         decoration: BoxDecoration(
+                  //           border: Border.all(color: Colors.grey.shade300),
+                  //           borderRadius: BorderRadius.circular(8),
+                  //         ),
+                  //         child: DropdownButton<ServiceCategory>(
+                  //           value: _selectedCategory,
+                  //           isExpanded: true,
+                  //           hint: Text('Select a category'),
+                  //           underline: SizedBox(),
+                  //           icon: Icon(Icons.keyboard_arrow_down),
+                  //           items: _allCategories.map((cat) {
+                  //             return DropdownMenuItem<ServiceCategory>(
+                  //               value: cat,
+                  //               child: Text(
+                  //                 cat.name,
+                  //                 style: TextStyle(fontSize: 16),
+                  //               ),
+                  //             );
+                  //           }).toList(),
+                  //           onChanged: _onCategoryChanged,
+                  //         ),
+                  //       ),
                 ],
               ),
             ),

@@ -30,10 +30,35 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
   Future<void> _loadUserData() async {
     try {
       setLoading(true, name: 'user_data');
+      print('ProfileDetailPage: Starting to load user data...');
 
+      // First check if user is authenticated
+      final isAuth = await AuthService.isAuthenticated();
+      print('ProfileDetailPage: User authenticated: $isAuth');
+
+      if (!isAuth) {
+        print(
+            'ProfileDetailPage: User not authenticated, redirecting to login');
+        routeTo("/sign-in");
+        return;
+      }
+
+      // Get current user
       final user = await AuthService.getCurrentUser();
-      print("User loaded in ProfileDetailPage: $user");
-      print("User data: ${user?.toJson()}");
+      print('ProfileDetailPage: Retrieved user: $user');
+
+      if (user != null) {
+        print('ProfileDetailPage: User details:');
+        print('  - ID: ${user.id}');
+        print('  - Email: ${user.email}');
+        print('  - First Name: ${user.firstName}');
+        print('  - Last Name: ${user.lastName}');
+        print('  - Full Name: ${user.fullName}');
+        print('  - Phone: ${user.phoneNumber}');
+        print('  - Date of Birth: ${user.dateOfBirth}');
+      } else {
+        print('ProfileDetailPage: User is null');
+      }
 
       if (mounted) {
         setState(() {
@@ -45,8 +70,10 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
           _populateFields(user);
         }
       }
-    } catch (e) {
-      print("Error loading user data: $e");
+    } catch (e, stackTrace) {
+      print('ProfileDetailPage: Error loading user data: $e');
+      print('ProfileDetailPage: Stack trace: $stackTrace');
+
       if (mounted) {
         setState(() {
           _errorMessage = "Failed to load user data: $e";
@@ -439,6 +466,37 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
                   isDateField: true,
                 ),
                 SizedBox(height: 40),
+
+                // Debug section (remove in production)
+                // if (_user != null)
+                // Container(
+                //   padding: const EdgeInsets.all(16),
+                //   decoration: BoxDecoration(
+                //     color: Colors.grey.shade100,
+                //     borderRadius: BorderRadius.circular(8),
+                //   ),
+                //   child: Column(
+                //     crossAxisAlignment: CrossAxisAlignment.start,
+                //     children: [
+                //       const Text(
+                //         'Debug Info:',
+                //         style: TextStyle(fontWeight: FontWeight.bold),
+                //       ),
+                //       const SizedBox(height: 8),
+                //       Text('ID: ${_user!.id}'),
+                //       Text('Email: ${_user!.email}'),
+                //       Text('First Name: "${_user!.firstName}"'),
+                //       Text('Last Name: "${_user!.lastName}"'),
+                //       Text('Full Name: "${_user!.fullName}"'),
+                //       Text('Phone: "${_user!.phoneNumber}"'),
+                //       Text('Date of Birth: "${_user!.dateOfBirth}"'),
+                //       Text('Profile Completed: ${_user!.profileCompleted}'),
+                //       Text('Is Verified: ${_user!.isVerified}'),
+                //       Text(
+                //           'Current Region: ${_user!.currentRegion?.name ?? 'None'}'),
+                //     ],
+                //   ),
+                // ),
               ],
             ),
           ),

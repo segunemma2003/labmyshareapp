@@ -26,19 +26,34 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
 
   @override
   get init => () async {
-        await _loadCategories();
+        final navData = widget.data() ?? {};
+        int? initialCategoryId = navData['categoryId'] as int?;
+        await _loadCategories(initialCategoryId: initialCategoryId);
       };
 
-  Future<void> _loadCategories() async {
+  Future<void> _loadCategories({int? initialCategoryId}) async {
     setState(() {
       _loadingCategories = true;
       _errorCategories = false;
     });
     try {
       final categories = await ServicesDataService.getServiceCategories();
+      ServiceCategory? selected;
+      if (initialCategoryId != null) {
+        if (categories.isNotEmpty) {
+          selected = categories.firstWhere(
+            (c) => c.id == initialCategoryId,
+            orElse: () => categories.first,
+          );
+        } else {
+          selected = null;
+        }
+      } else {
+        selected = categories.isNotEmpty ? categories.first : null;
+      }
       setState(() {
         _categories = categories;
-        _selectedCategory = categories.isNotEmpty ? categories.first : null;
+        _selectedCategory = selected;
         _loadingCategories = false;
       });
       if (_selectedCategory != null) {
@@ -281,9 +296,9 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
               height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? Color(0xFF8B4513) : Color(0xFFFFFFFF),
+                color: isSelected ? Color(0xFF985F5F) : Color(0xFFFFFFFF),
                 border: Border.all(
-                  color: isSelected ? Color(0xFF8B4513) : Color(0xFFE0E0E0),
+                  color: isSelected ? Color(0xFF985F5F) : Color(0xFFE0E0E0),
                 ),
               ),
               child: Icon(
