@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class GetHelpPage extends NyStatefulWidget {
   static RouteView path = ("/get-help", (_) => GetHelpPage());
@@ -58,16 +59,38 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
     routeTo('/chat');
   }
 
-  void _openEmail() {
-    // Open email client or navigate to email page
+  void _openEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'info@thehairspaclinic.com',
+    );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      showToast(
+        title: "Error",
+        description: "Could not open email app.",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
   }
 
   // void _openTwitter() {
   //   // Open Twitter/X app or web
   // }
 
-  void _openInstagram() {
-    // Open Instagram app or web
+  void _openInstagram() async {
+    const url =
+        'https://www.instagram.com/thehairspaclinic?igsh=em5lOWx0MGE4OW9w';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      showToast(
+        title: "Error",
+        description: "Could not open Instagram.",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
   }
 
   @override
