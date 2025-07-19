@@ -16,7 +16,7 @@ class _FAQsPageState extends NyPage<FaqsPage> {
           FAQ(
             question: "How many percent do I deposit?",
             answer:
-                "To secure your booking or transaction, a deposit of 60% is required. This deposit is non-refundable, meaning that once it is paid, it cannot be returned. This policy helps us ensure that your reservation is confirmed and that we can allocate the necessary resources for your service.\n\nAfter the services are rendered, you will be expected to pay the remaining 40% to complete the transaction. This balance is due upon completion of the service or at the time specified in your agreement. We appreciate your understanding and cooperation in this matter, as it allows us to provide you with the best possible experience.",
+                "To secure your booking or transaction, a deposit of 50% is required. This deposit is non-refundable, meaning that once it is paid, it cannot be returned. This policy helps us ensure that your reservation is confirmed and that we can allocate the necessary resources for your service.\n\nAfter the services are rendered, you will be expected to pay the remaining 50% to complete the transaction. This balance is due upon completion of the service or at the time specified in your agreement. We appreciate your understanding and cooperation in this matter, as it allows us to provide you with the best possible experience.",
           ),
           FAQ(
             question: "Is my deposit refundable if i don't show?",
@@ -52,7 +52,7 @@ class _FAQsPageState extends NyPage<FaqsPage> {
 
   Widget _buildFAQDetailsBottomSheet(FAQ faq) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
