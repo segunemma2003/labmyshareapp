@@ -35,11 +35,19 @@ class _HomeTabState extends NyState<HomeTab> {
     try {
       final user = await AuthService.getCurrentUser();
       final regions = await RegionService.getRegions();
-      Region? currentRegion = user?.currentRegion;
+
       if (regions != null && regions.isNotEmpty) {
         setState(() {
           _regions = regions;
-          _selectedRegion = currentRegion ?? regions.first;
+          // Find the matching region from the API list using the code
+          if (user?.currentRegion?.code != null) {
+            _selectedRegion = _regions.firstWhere(
+              (region) => region.code == user!.currentRegion!.code,
+              orElse: () => regions.first,
+            );
+          } else {
+            _selectedRegion = regions.first;
+          }
           _loadingRegions = false;
         });
         await _loadCategories();
@@ -50,6 +58,7 @@ class _HomeTabState extends NyState<HomeTab> {
         });
       }
     } catch (e) {
+      print('Error loading regions and user: $e');
       setState(() {
         _loadingRegions = false;
         _errorRegions = true;
@@ -69,6 +78,7 @@ class _HomeTabState extends NyState<HomeTab> {
         _loadingCategories = false;
       });
     } catch (e) {
+      print('Error loading categories: $e');
       setState(() {
         _loadingCategories = false;
         _errorCategories = true;

@@ -185,6 +185,14 @@ class _ProfileTabState extends NyState<ProfileTab> {
     );
   }
 
+  String? _getProfileImageUrl(User? user) {
+    if (user?.profilePicture == null || user!.profilePicture!.isEmpty)
+      return null;
+    final url = user.profilePicture!;
+    if (url.startsWith('http')) return url;
+    return 'http://backend.beautyspabyshea.co.uk$url';
+  }
+
   Widget _buildMainContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -206,10 +214,11 @@ class _ProfileTabState extends NyState<ProfileTab> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.grey.shade200,
-                        image: _user?.profilePicture != null &&
-                                _user!.profilePicture!.isNotEmpty
+                        image: (_user != null &&
+                                _getProfileImageUrl(_user) != null)
                             ? DecorationImage(
-                                image: NetworkImage(_user!.profilePicture!),
+                                image:
+                                    NetworkImage(_getProfileImageUrl(_user)!),
                                 fit: BoxFit.cover,
                               )
                             : DecorationImage(
@@ -373,31 +382,6 @@ class _ProfileTabState extends NyState<ProfileTab> {
           const SizedBox(height: 40),
 
           // Debug section (remove in production)
-          if (_user != null)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Debug Info:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Full Name: ${_user!.fullName}'),
-                  Text('First Name: ${_user!.firstName}'),
-                  Text('Last Name: ${_user!.lastName}'),
-                  Text('Email: ${_user!.email}'),
-                  Text('Profile Completed: ${_user!.profileCompleted}'),
-                  Text(
-                      'Current Region: ${_user!.currentRegion?.name ?? 'None'}'),
-                ],
-              ),
-            ),
         ],
       ),
     );
