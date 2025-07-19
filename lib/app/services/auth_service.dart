@@ -1,3 +1,4 @@
+import 'dart:convert'; // Ensure this is at the top
 import 'package:flutter_app/app/networking/auth_api_service.dart';
 import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:flutter_app/app/networking/services_api_service.dart';
@@ -34,7 +35,7 @@ class AuthService {
         await Keys.auth.save(response['token'].toString());
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
-          await Keys.userProfile.save(userData);
+          await _saveUserData(userData);
         }
         return true;
       }
@@ -59,7 +60,7 @@ class AuthService {
         // Update user profile with verified status
         if (response['user'] != null) {
           User user = User.fromJson(response['user']);
-          await Keys.userProfile.save(user.toJson());
+          await _saveUserData(user.toJson());
         }
         return true;
       }
@@ -103,11 +104,12 @@ class AuthService {
       );
 
       if (response != null && response['token'] != null) {
-        // Always save the token as a String
+        // Save the token as a String in Keys.auth
         await Keys.auth.save(response['token'].toString());
+
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
-          await Keys.userProfile.save(userData);
+          await _saveUserData(userData);
         }
         return true;
       }
@@ -129,10 +131,12 @@ class AuthService {
       );
 
       if (response != null && response['token'] != null) {
-        await Keys.auth.save(response['token']);
+        // Save the token as a String in Keys.auth
+        await Keys.auth.save(response['token'].toString());
+
         if (response['user'] != null) {
           User user = User.fromJson(response['user']);
-          await Keys.userProfile.save(user.toJson());
+          await _saveUserData(user.toJson());
 
           // Check if this is a new user
           bool isNewUser = response['is_new_user'] ?? false;
@@ -166,6 +170,7 @@ class AuthService {
       await Keys.bookingDraft.flush();
       await Keys.currentRegion.flush();
       await _notificationApi.clearUserSpecificCache();
+      // await Auth.logout(); // Removed as per edit hint
     }
   }
 
@@ -174,28 +179,59 @@ class AuthService {
     return token != null && token.isNotEmpty;
   }
 
+  static Future<void> _saveUserData(Map<String, dynamic> userData) async {
+    // Always save as JSON string for consistency
+    await Keys.userProfile.save(jsonEncode(userData));
+  }
+
   static Future<User?> getCurrentUser() async {
     try {
       final userData = await Keys.userProfile.read();
       if (userData != null) {
-        print('Raw user data: $userData'); // Debug log
+        print('Raw user data: $userData');
+        print('User data type: ${userData.runtimeType}');
 
-        // Add null checks for problematic fields
-        if (userData is Map<String, dynamic>) {
-          // Handle empty string gender
-          if (userData['gender'] == '') {
-            userData['gender'] = null;
+        Map<String, dynamic>? userMap;
+
+        if (userData is Map) {
+          // Data is already a Map
+          userMap = Map<String, dynamic>.from(userData);
+          print('User data is a Map');
+        } else if (userData is String) {
+          // Data is a string, try to parse it
+          try {
+            // Try JSON decode first
+            userMap = Map<String, dynamic>.from(jsonDecode(userData));
+            print('Successfully parsed JSON string');
+          } catch (e) {
+            print('Failed to parse as JSON: $e');
+            // If JSON parsing fails, the data might be corrupted
+            // Clear the corrupted data and return null
+            print('Clearing corrupted user data...');
+            await Keys.userProfile.flush();
+            return null;
+          }
+        } else {
+          print('Unexpected user data type: ${userData.runtimeType}');
+          return null;
+        }
+
+        if (userMap != null) {
+          // Handle empty gender field
+          if (userMap['gender'] == '') {
+            userMap['gender'] = null;
           }
 
-          // Handle any other potential string index issues
           print('Parsing user data...');
-          return User.fromJson(userData);
+          return User.fromJson(userMap);
         }
       }
       return null;
     } catch (e) {
       print('Get current user error details: $e');
       print('Stack trace: ${StackTrace.current}');
+      // Clear potentially corrupted data
+      await Keys.userProfile.flush();
       return null;
     }
   }
@@ -263,7 +299,7 @@ class AuthService {
       );
 
       if (user != null) {
-        await Keys.userProfile.save(user.toJson());
+        await _saveUserData(user.toJson());
         return true;
       }
       return false;
@@ -281,8 +317,28 @@ class AuthService {
         // Update the saved user profile with new image URL
         final userData = await Keys.userProfile.read();
         if (userData != null) {
-          userData['profile_picture'] = response['profile_picture'];
-          await Keys.userProfile.save(userData);
+          Map<String, dynamic> userMap;
+
+          if (userData is Map) {
+            // Data is already a Map
+            userMap = Map<String, dynamic>.from(userData);
+          } else if (userData is String) {
+            // Data is a string, try to parse it
+            try {
+              userMap = Map<String, dynamic>.from(jsonDecode(userData));
+            } catch (e) {
+              print('Failed to parse user data in updateProfileImage: $e');
+              return false;
+            }
+          } else {
+            print(
+                'Unexpected user data type in updateProfileImage: ${userData.runtimeType}');
+            return false;
+          }
+
+          // Update the profile picture
+          userMap['profile_picture'] = response['profile_picture'];
+          await _saveUserData(userMap);
         }
         return true;
       }
@@ -314,7 +370,7 @@ class AuthService {
         // Update user profile with new region if returned
         if (response['user'] != null) {
           User user = User.fromJson(response['user']);
-          await Keys.userProfile.save(user.toJson());
+          await _saveUserData(user.toJson());
         }
 
         // Clear region/service/add-on caches
@@ -344,7 +400,7 @@ class AuthService {
       );
 
       if (user != null) {
-        await Keys.userProfile.save(user.toJson());
+        await _saveUserData(user.toJson());
         return true;
       }
       return false;

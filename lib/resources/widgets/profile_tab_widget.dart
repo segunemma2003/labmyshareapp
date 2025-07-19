@@ -4,6 +4,7 @@ import 'package:flutter_app/resources/pages/profile_detail_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_app/app/models/user.dart';
+import 'dart:convert'; // Add this import
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -22,6 +23,8 @@ class _ProfileTabState extends NyState<ProfileTab> {
       };
 
   Future<void> _loadUserData() async {
+    print("-------------------------");
+
     try {
       setLoading(true, name: 'user_data');
       print('ProfileTab: Starting to load user data...');
