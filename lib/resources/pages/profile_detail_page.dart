@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:flutter_app/app/models/user.dart';
-import 'package:image_picker/image_picker.dart';
 
 class ProfileDetailPage extends NyStatefulWidget {
   static RouteView path = ("/profile-detail", (_) => ProfileDetailPage());
@@ -19,13 +18,14 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
 
   bool _hasChanges = false;
   String? _errorMessage;
+  bool _isInitialized = false;
 
   User? _user;
 
   @override
-  boot() async {
-    await _loadUserData();
-  }
+  get init => () async {
+        await _loadUserData();
+      };
 
   Future<void> _loadUserData() async {
     try {
@@ -45,17 +45,17 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
 
       // Always get current user from AuthService
       final user = await AuthService.getCurrentUser();
-      print('ProfileDetailPage: Retrieved user: $user');
 
       if (user != null) {
-        print('ProfileDetailPage: User details:');
+        print('ProfileDetailPage: User loaded successfully');
         print('  - ID: ${user.id}');
         print('  - Email: ${user.email}');
-        print('  - First Name: ${user.firstName}');
-        print('  - Last Name: ${user.lastName}');
-        print('  - Full Name: ${user.fullName}');
-        print('  - Phone: ${user.phoneNumber}');
-        print('  - Date of Birth: ${user.dateOfBirth}');
+        print('  - First Name: "${user.firstName}"');
+        print('  - Last Name: "${user.lastName}"');
+        print('  - Full Name: "${user.fullName}"');
+        print('  - Phone: "${user.phoneNumber}"');
+        print('  - Date of Birth: "${user.dateOfBirth}"');
+        print('  - Profile Completed: ${user.profileCompleted}');
       } else {
         print('ProfileDetailPage: User is null');
       }
@@ -87,10 +87,26 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
   }
 
   void _populateFields(User user) {
+    print('ProfileDetailPage: Populating fields...');
+
     // Use fullName if available, otherwise construct from first and last name
     final displayName = user.fullName?.trim() ??
         "${user.firstName ?? ''} ${user.lastName ?? ''}".trim();
 
+    print('  - Setting account name to: "$displayName"');
+    print('  - Setting phone to: "${user.phoneNumber ?? ""}"');
+    print('  - Setting email to: "${user.email ?? ""}"');
+    print('  - Setting date of birth to: "${user.dateOfBirth ?? ""}"');
+
+    // Remove any existing listeners first
+    if (_isInitialized) {
+      _accountNameController.removeListener(_onFieldChanged);
+      _phoneController.removeListener(_onFieldChanged);
+      _emailController.removeListener(_onFieldChanged);
+      _dateOfBirthController.removeListener(_onFieldChanged);
+    }
+
+    // Set the field values
     _accountNameController.text = displayName;
     _phoneController.text = user.phoneNumber ?? "";
     _emailController.text = user.email ?? "";
@@ -101,10 +117,20 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
     _phoneController.addListener(_onFieldChanged);
     _emailController.addListener(_onFieldChanged);
     _dateOfBirthController.addListener(_onFieldChanged);
+
+    _isInitialized = true;
+
+    // Reset the changes flag since we're just loading initial data
+    setState(() {
+      _hasChanges = false;
+    });
+
+    print('ProfileDetailPage: Fields populated successfully');
   }
 
   void _onFieldChanged() {
     if (!_hasChanges) {
+      print('ProfileDetailPage: Field changed, marking as having changes');
       setState(() {
         _hasChanges = true;
       });
@@ -113,10 +139,12 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
 
   @override
   void dispose() {
-    _accountNameController.removeListener(_onFieldChanged);
-    _phoneController.removeListener(_onFieldChanged);
-    _emailController.removeListener(_onFieldChanged);
-    _dateOfBirthController.removeListener(_onFieldChanged);
+    if (_isInitialized) {
+      _accountNameController.removeListener(_onFieldChanged);
+      _phoneController.removeListener(_onFieldChanged);
+      _emailController.removeListener(_onFieldChanged);
+      _dateOfBirthController.removeListener(_onFieldChanged);
+    }
 
     _accountNameController.dispose();
     _phoneController.dispose();
@@ -151,8 +179,7 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
           ),
           child: TextFormField(
             controller: controller,
-            readOnly:
-                isDateField || isEmailField, // Only date and email are readOnly
+            readOnly: isEmailField, // Only email is readOnly
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(color: Colors.grey.shade500),
@@ -177,9 +204,6 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
     );
   }
 
-  // Remove dialog-based editing for name and phone
-  void _editAccountName() {}
-  void _editPhoneNumber() {}
   void _editEmail() {
     showToast(
       title: "Information",
@@ -192,15 +216,23 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
     DateTime? currentDate;
     if (_dateOfBirthController.text.isNotEmpty) {
       try {
-        final parts = _dateOfBirthController.text.split('/');
-        if (parts.length == 3) {
-          currentDate = DateTime(
-            int.parse(parts[2]),
-            int.parse(parts[1]),
-            int.parse(parts[0]),
-          );
+        // Handle different date formats
+        final text = _dateOfBirthController.text;
+        if (text.contains('/')) {
+          final parts = text.split('/');
+          if (parts.length == 3) {
+            currentDate = DateTime(
+              int.parse(parts[2]),
+              int.parse(parts[1]),
+              int.parse(parts[0]),
+            );
+          }
+        } else if (text.contains('-')) {
+          // Handle YYYY-MM-DD format
+          currentDate = DateTime.tryParse(text);
         }
       } catch (e) {
+        print('Error parsing date: $e');
         currentDate = null;
       }
     }
@@ -214,27 +246,65 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
     );
 
     if (pickedDate != null) {
+      // Format as DD/MM/YYYY for display
+      final formattedDate =
+          "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
+      print('ProfileDetailPage: Setting date to: $formattedDate');
       setState(() {
-        _dateOfBirthController.text =
-            "${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}";
+        _dateOfBirthController.text = formattedDate;
       });
     }
   }
 
   void _saveChanges() async {
     try {
+      print('ProfileDetailPage: Starting to save changes...');
       setLoading(true, name: 'saving_profile');
 
-      final names = _accountNameController.text.trim().split(' ');
+      final accountName = _accountNameController.text.trim();
+      final phone = _phoneController.text.trim();
+      final dateOfBirth = _dateOfBirthController.text.trim();
+
+      print('  - Account name: "$accountName"');
+      print('  - Phone: "$phone"');
+      print('  - Date of birth: "$dateOfBirth"');
+
+      // Split the full name into first and last name
+      final names = accountName.split(' ');
       final firstName = names.isNotEmpty ? names.first : '';
       final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+
+      print('  - First name: "$firstName"');
+      print('  - Last name: "$lastName"');
+
+      // Convert date format from DD/MM/YYYY to YYYY-MM-DD if needed
+      String? formattedDate;
+      if (dateOfBirth.isNotEmpty) {
+        try {
+          if (dateOfBirth.contains('/')) {
+            final parts = dateOfBirth.split('/');
+            if (parts.length == 3) {
+              formattedDate =
+                  "${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}";
+            }
+          } else {
+            formattedDate = dateOfBirth; // Already in correct format
+          }
+          print('  - Formatted date: "$formattedDate"');
+        } catch (e) {
+          print('  - Error formatting date: $e');
+          formattedDate = null;
+        }
+      }
 
       final success = await AuthService.updateProfile(
         firstName: firstName,
         lastName: lastName,
-        phoneNumber: _phoneController.text.trim(),
-        dateOfBirth: _dateOfBirthController.text.trim(),
+        phoneNumber: phone.isEmpty ? null : phone,
+        dateOfBirth: formattedDate,
       );
+
+      print('ProfileDetailPage: Update result: $success');
 
       if (mounted) {
         setState(() {
@@ -252,16 +322,18 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
         );
 
         if (success) {
+          print(
+              'ProfileDetailPage: Reloading user data after successful update...');
           // Always reload user data from AuthService after update
           await _loadUserData();
         }
       }
     } catch (e) {
-      print("Error saving profile: $e");
+      print("ProfileDetailPage: Error saving profile: $e");
       if (mounted) {
         showToast(
           title: "Error",
-          description: 'Error updating profile:  e.toString()',
+          description: 'Error updating profile: ${e.toString()}',
           style: ToastNotificationStyleType.danger,
         );
       }
@@ -395,36 +467,7 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
                 ),
                 SizedBox(height: 40),
 
-                // Debug section (remove in production)
-                // if (_user != null)
-                // Container(
-                //   padding: const EdgeInsets.all(16),
-                //   decoration: BoxDecoration(
-                //     color: Colors.grey.shade100,
-                //     borderRadius: BorderRadius.circular(8),
-                //   ),
-                //   child: Column(
-                //     crossAxisAlignment: CrossAxisAlignment.start,
-                //     children: [
-                //       const Text(
-                //         'Debug Info:',
-                //         style: TextStyle(fontWeight: FontWeight.bold),
-                //       ),
-                //       const SizedBox(height: 8),
-                //       Text('ID: ${_user!.id}'),
-                //       Text('Email: ${_user!.email}'),
-                //       Text('First Name: "${_user!.firstName}"'),
-                //       Text('Last Name: "${_user!.lastName}"'),
-                //       Text('Full Name: "${_user!.fullName}"'),
-                //       Text('Phone: "${_user!.phoneNumber}"'),
-                //       Text('Date of Birth: "${_user!.dateOfBirth}"'),
-                //       Text('Profile Completed: ${_user!.profileCompleted}'),
-                //       Text('Is Verified: ${_user!.isVerified}'),
-                //       Text(
-                //           'Current Region: ${_user!.currentRegion?.name ?? 'None'}'),
-                //     ],
-                //   ),
-                // ),
+                // Debug section (you can remove this in production)
               ],
             ),
           ),

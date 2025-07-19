@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/resources/pages/faqs_page.dart';
+import 'package:flutter_app/resources/pages/get_help_page.dart';
+import 'package:flutter_app/resources/pages/legal_page.dart';
+import 'package:flutter_app/resources/pages/location_change_page.dart';
 import 'package:flutter_app/resources/pages/profile_detail_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:image_picker/image_picker.dart';
@@ -127,34 +131,34 @@ class _ProfileTabState extends NyState<ProfileTab> {
   }
 
   void _navigateToLocation() {
-    print("Location pressed");
+    routeTo(LocationChangePage.path);
     // Navigate to location settings
   }
 
-  void _navigateToPaymentDetails() {
-    print("Payment details pressed");
-    // Navigate to payment methods page
-  }
+  // void _navigateToPaymentDetails() {
+  //   print("Payment details pressed");
+  //   // Navigate to payment methods page
+  // }
 
   void _navigateToGetHelp() {
-    print("Get help pressed");
+    routeTo(GetHelpPage.path);
     // Navigate to help/support page
   }
 
   void _navigateToFAQs() {
-    print("FAQs pressed");
+    routeTo(FaqsPage.path);
     // Navigate to FAQs page
   }
 
   void _navigateToLegal() {
-    print("Legal pressed");
+    routeTo(LegalPage.path);
     // Navigate to legal/terms page
   }
 
-  void _navigateToReviews() {
-    print("Reviews pressed");
-    // Navigate to user reviews page
-  }
+  // void _navigateToReviews() {
+  //   print("Reviews pressed");
+  //   // Navigate to user reviews page
+  // }
 
   Widget _buildErrorState() {
     return Center(
@@ -333,11 +337,11 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 title: "Location",
                 onTap: _navigateToLocation,
               ),
-              _buildProfileOption(
-                icon: Icons.payment_outlined,
-                title: "Payment details",
-                onTap: _navigateToPaymentDetails,
-              ),
+              // _buildProfileOption(
+              //   icon: Icons.payment_outlined,
+              //   title: "Payment details",
+              //   onTap: _navigateToPaymentDetails,
+              // ),
             ],
           ),
 
@@ -371,11 +375,11 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 title: "Legal",
                 onTap: _navigateToLegal,
               ),
-              _buildProfileOption(
-                icon: Icons.rate_review_outlined,
-                title: "Reviews",
-                onTap: _navigateToReviews,
-              ),
+              // _buildProfileOption(
+              //   icon: Icons.rate_review_outlined,
+              //   title: "Reviews",
+              //   onTap: _navigateToReviews,
+              // ),
             ],
           ),
 
