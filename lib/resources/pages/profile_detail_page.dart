@@ -43,7 +43,7 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
         return;
       }
 
-      // Get current user
+      // Always get current user from AuthService
       final user = await AuthService.getCurrentUser();
       print('ProfileDetailPage: Retrieved user: $user');
 
@@ -128,7 +128,6 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
   Widget _buildInputField({
     required String label,
     required TextEditingController controller,
-    required VoidCallback onEdit,
     String? hintText,
     bool isDateField = false,
     bool isEmailField = false,
@@ -152,20 +151,18 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
           ),
           child: TextFormField(
             controller: controller,
-            readOnly: isDateField || isEmailField,
+            readOnly:
+                isDateField || isEmailField, // Only date and email are readOnly
             decoration: InputDecoration(
               hintText: hintText,
               hintStyle: TextStyle(color: Colors.grey.shade500),
               border: InputBorder.none,
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              suffixIcon: isEmailField
-                  ? Icon(Icons.email, color: Colors.grey.shade400, size: 20)
-                  : IconButton(
-                      icon: Icon(Icons.edit,
-                          color: Colors.grey.shade600, size: 20),
-                      onPressed: onEdit,
-                    ),
+              suffixIcon: isDateField
+                  ? Icon(Icons.calendar_today,
+                      color: Colors.grey.shade400, size: 20)
+                  : null,
             ),
             style: TextStyle(
               fontSize: 16,
@@ -173,82 +170,16 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
                   ? Colors.grey.shade500
                   : Colors.black87,
             ),
-            onTap: isDateField ? onEdit : null,
+            onTap: isDateField ? _editDateOfBirth : null,
           ),
         ),
       ],
     );
   }
 
-  void _editAccountName() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final nameController =
-            TextEditingController(text: _accountNameController.text);
-        return AlertDialog(
-          title: Text('Edit Account Name'),
-          content: TextField(
-            controller: nameController,
-            decoration: InputDecoration(
-              labelText: 'Full Name',
-              hintText: 'Enter your full name',
-            ),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _accountNameController.text = nameController.text;
-                Navigator.pop(context);
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _editPhoneNumber() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final phoneController =
-            TextEditingController(text: _phoneController.text);
-        return AlertDialog(
-          title: Text('Edit Phone Number'),
-          content: TextField(
-            controller: phoneController,
-            decoration: InputDecoration(
-              labelText: 'Phone Number',
-              hintText: 'Enter your phone number',
-            ),
-            keyboardType: TextInputType.phone,
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _phoneController.text = phoneController.text;
-                Navigator.pop(context);
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
+  // Remove dialog-based editing for name and phone
+  void _editAccountName() {}
+  void _editPhoneNumber() {}
   void _editEmail() {
     showToast(
       title: "Information",
@@ -321,7 +252,7 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
         );
 
         if (success) {
-          // Reload user data after successful update
+          // Always reload user data from AuthService after update
           await _loadUserData();
         }
       }
@@ -330,7 +261,7 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
       if (mounted) {
         showToast(
           title: "Error",
-          description: 'Error updating profile: ${e.toString()}',
+          description: 'Error updating profile:  e.toString()',
           style: ToastNotificationStyleType.danger,
         );
       }
@@ -440,30 +371,27 @@ class _ProfileDetailPageState extends NyPage<ProfileDetailPage> {
                 _buildInputField(
                   label: "Account name",
                   controller: _accountNameController,
-                  onEdit: _editAccountName,
                   hintText: "Enter your full name",
                 ),
                 SizedBox(height: 24),
                 _buildInputField(
                   label: "Phone number",
                   controller: _phoneController,
-                  onEdit: _editPhoneNumber,
                   hintText: "Enter your phone number",
                 ),
                 SizedBox(height: 24),
                 _buildInputField(
                   label: "Email",
                   controller: _emailController,
-                  onEdit: _editEmail,
                   isEmailField: true,
+                  hintText: "Enter your email",
                 ),
                 SizedBox(height: 24),
                 _buildInputField(
                   label: "Date of birth",
                   controller: _dateOfBirthController,
-                  onEdit: _editDateOfBirth,
-                  hintText: "Set date of birth",
                   isDateField: true,
+                  hintText: "Set date of birth",
                 ),
                 SizedBox(height: 40),
 
