@@ -62,9 +62,9 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
     // Open email client or navigate to email page
   }
 
-  void _openTwitter() {
-    // Open Twitter/X app or web
-  }
+  // void _openTwitter() {
+  //   // Open Twitter/X app or web
+  // }
 
   void _openInstagram() {
     // Open Instagram app or web
@@ -104,11 +104,11 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
               title: "Email",
               onTap: _openEmail,
             ),
-            _buildHelpOption(
-              icon: Icons.close, // X icon for Twitter/X
-              title: "X (Twitter)",
-              onTap: _openTwitter,
-            ),
+            // _buildHelpOption(
+            //   icon: Icons.close, // X icon for Twitter/X
+            //   title: "X (Twitter)",
+            //   onTap: _openTwitter,
+            // ),
             _buildHelpOption(
               icon: Icons.camera_alt_outlined,
               title: "Instagram",

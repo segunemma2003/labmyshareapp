@@ -378,6 +378,7 @@ class AuthService {
         await _notificationApi.clearServiceCache();
         await _notificationApi.clearProfessionalsCache();
         await ServicesApiService().clearCache();
+        await cache().flush();
         return true;
       }
       return false;

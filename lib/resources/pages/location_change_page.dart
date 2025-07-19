@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/app/services/region_service.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/models/region.dart';
+import '/config/keys.dart';
 
 class LocationChangePage extends NyStatefulWidget {
   static RouteView path = ("/location-change", (_) => LocationChangePage());
@@ -9,88 +13,121 @@ class LocationChangePage extends NyStatefulWidget {
 }
 
 class _LocationChangePageState extends NyPage<LocationChangePage> {
-  String selectedLocation = "United Kingdom";
+  List<Region> _regions = [];
+  String? _selectedRegionCode;
+  bool _loading = true;
+  bool _error = false;
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        await _loadRegionsAndCurrent();
       };
 
-  Widget _buildLocationOption({
-    required String flag,
-    required String countryName,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(8),
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
-        ),
-        child: Row(
-          children: [
-            Text(
-              flag,
-              style: TextStyle(fontSize: 18),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                countryName,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: Colors.black87,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _loadRegionsAndCurrent() async {
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
+    try {
+      final regions = await RegionService.getRegions();
+      String? currentRegionCode = await Keys.currentRegion.read();
+      setState(() {
+        _regions = regions ?? [];
+        _selectedRegionCode = currentRegionCode ??
+            (_regions.isNotEmpty ? _regions.first.code : null);
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _error = true;
+      });
+    }
   }
 
-  Widget _buildScheduleItem(String day, String hours) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.orange,
-              borderRadius: BorderRadius.circular(2),
+  Future<void> _onRegionTap(Region region) async {
+    if (_selectedRegionCode == region.code) return;
+    setState(() {
+      _loading = true;
+    });
+    final success = await AuthService.switchRegion(regionCode: region.code!);
+    if (success) {
+      setState(() {
+        _selectedRegionCode = region.code;
+        _loading = false;
+      });
+      showToast(
+        title: "Success",
+        description: "Region switched to ${region.name}",
+        style: ToastNotificationStyleType.success,
+      );
+    } else {
+      setState(() {
+        _loading = false;
+      });
+      showToast(
+        title: "Error",
+        description: "Failed to switch region.",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
+  }
+
+  Widget _buildRegionSelection() {
+    if (_regions.isEmpty) {
+      return Text(
+        "No regions available",
+        style: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF666666),
+        ),
+      );
+    }
+    return Row(
+      children: _regions.map((region) {
+        bool isSelected = _selectedRegionCode == region.code;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: _regions.last == region ? 0 : 12,
             ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              day,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
+            child: GestureDetector(
+              onTap: () => _onRegionTap(region),
+              child: Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSelected ? Color(0xFF000000) : Color(0xFFE0E0E0),
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.location_on,
+                        color:
+                            isSelected ? Color(0xFF000000) : Color(0xFF5C7CFA)),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        region.name ?? region.code ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF000000),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          Text(
-            hours,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 
@@ -115,195 +152,65 @@ class _LocationChangePageState extends NyPage<LocationChangePage> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // World Map Area
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  image: DecorationImage(
-                    image: AssetImage('map.png').localAsset(),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 24),
-
-              // Switch your current location section
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Switch your current location",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-
-                    SizedBox(height: 20),
-
-                    // Location options
-                    Row(
+        child: _loading
+            ? Center(child: CircularProgressIndicator())
+            : _error
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: _buildLocationOption(
-                            flag: "🇬🇧",
-                            countryName: "United Kingdom",
-                            isSelected: selectedLocation == "United Kingdom",
-                            onTap: () {
-                              setState(() {
-                                selectedLocation = "United Kingdom";
-                              });
-                            },
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: _buildLocationOption(
-                            flag: "🇦🇪",
-                            countryName: "United Arab Emirates",
-                            isSelected:
-                                selectedLocation == "United Arab Emirates",
-                            onTap: () {
-                              setState(() {
-                                selectedLocation = "United Arab Emirates";
-                              });
-                            },
-                          ),
+                        Icon(Icons.error, color: Colors.red, size: 40),
+                        SizedBox(height: 12),
+                        Text('Failed to load regions'),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: _loadRegionsAndCurrent,
+                          child: Text('Retry'),
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 24),
-
-                    // Selected location details
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_city,
-                                color: Colors.orange,
-                                size: 20,
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  selectedLocation == "United Kingdom"
-                                      ? "Beckenham, England, United kingdom"
-                                      : "Dubai, United Arab Emirates",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ],
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // World Map Area
+                        Container(
+                          height: 300,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            image: DecorationImage(
+                              image: AssetImage('map.png').localAsset(),
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                          SizedBox(height: 12),
-                          Row(
+                        ),
+                        SizedBox(height: 24),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  "Closed",
-                                  style: TextStyle(
-                                    color: Colors.red.shade700,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12),
                               Text(
-                                "Opens next 9am Monday",
+                                "Switch your current location",
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.black87,
                                 ),
                               ),
+                              SizedBox(height: 20),
+                              _buildRegionSelection(),
+                              SizedBox(height: 24),
                             ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 24),
-
-                    // Schedule section
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          color: Colors.grey.shade600,
-                          size: 20,
-                        ),
-                        SizedBox(width: 8),
-                        Text(
-                          "Schedule",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
                           ),
                         ),
                       ],
                     ),
-
-                    SizedBox(height: 16),
-
-                    // Schedule items
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildScheduleItem("Monday", "9am-10pm"),
-                          _buildScheduleItem("Tuesday", "9am-10pm"),
-                          _buildScheduleItem("Wednesday", "9am-10pm"),
-                          _buildScheduleItem("Thursday", "9am-10pm"),
-                          _buildScheduleItem("Friday", "9am-10pm"),
-                          _buildScheduleItem("Saturday", "9am-10pm"),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+                  ),
       ),
     );
   }
