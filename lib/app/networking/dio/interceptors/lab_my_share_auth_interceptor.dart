@@ -5,10 +5,22 @@ class LabMyShareAuthInterceptor extends Interceptor {
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    String? token = await Keys.auth.read();
-    if (token != null) {
-      options.headers["Authorization"] = "Token $token";
+    try {
+      final tokenData = await Keys.auth.read();
+      String? token;
+
+      if (tokenData != null) {
+        // Ensure token is always a string
+        token = tokenData.toString();
+      }
+
+      if (token != null && token.isNotEmpty) {
+        options.headers["Authorization"] = "Token $token";
+      }
+    } catch (e) {
+      print('Error reading auth token: $e');
     }
+
     handler.next(options);
   }
 
