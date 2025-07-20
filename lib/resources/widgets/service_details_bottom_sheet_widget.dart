@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/service_item.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 
 class ServiceDetailsBottomSheet extends StatefulWidget {
   final Service service;
@@ -22,11 +23,23 @@ class ServiceDetailsBottomSheet extends StatefulWidget {
 
 class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
   late List<AddOn> _selectedAddOns;
+  String _currencySymbol = '£'; // Default currency symbol
 
   @override
   void initState() {
     super.initState();
     _selectedAddOns = List<AddOn>.from(widget.initiallySelectedAddOns);
+    _loadCurrencySymbol();
+  }
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      _currencySymbol = await RegionService.getCurrentCurrencySymbol();
+      if (mounted) setState(() {});
+    } catch (e) {
+      print('Error loading currency symbol: $e');
+      _currencySymbol = '£'; // Default fallback
+    }
   }
 
   @override
@@ -99,7 +112,7 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                   SizedBox(height: 4),
                   Text(
                     widget.service.regionalPrice != null
-                        ? "From £${widget.service.regionalPrice!.toStringAsFixed(2)}"
+                        ? "From $_currencySymbol${widget.service.regionalPrice!.toStringAsFixed(2)}"
                         : "",
                     style: TextStyle(
                       fontSize: 16,
@@ -252,7 +265,7 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
                       if (addon.durationMinutes != null) SizedBox(width: 12),
                       if (addon.price != null)
                         Text(
-                          "£${addon.price}",
+                          "$_currencySymbol${addon.price}",
                           style: TextStyle(
                             fontSize: 13,
                             color: Color(0xFF666666),

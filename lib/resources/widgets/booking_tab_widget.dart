@@ -3,6 +3,7 @@ import 'package:flutter_app/resources/pages/booking_details_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '../../app/services/booking_service.dart';
 import '../../app/models/booking.dart';
+import '../../app/services/region_service.dart';
 
 class BookingTab extends StatefulWidget {
   const BookingTab({super.key});
@@ -20,12 +21,23 @@ class _BookingTabState extends NyState<BookingTab>
   List<Booking> closedAppointments = [];
   bool loading = true;
   String? error;
+  String _currencySymbol = '£'; // Default currency symbol
 
   @override
   get init => () async {
         _tabController = TabController(length: 3, vsync: this);
+        await _loadCurrencySymbol();
         await _loadBookings();
       };
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      _currencySymbol = await RegionService.getCurrentCurrencySymbol();
+    } catch (e) {
+      print('Error loading currency symbol: $e');
+      _currencySymbol = '£'; // Default fallback
+    }
+  }
 
   Future<void> _loadBookings() async {
     setState(() {
@@ -34,11 +46,14 @@ class _BookingTabState extends NyState<BookingTab>
     });
 
     try {
-      // Load bookings with proper error handling
+      // Load bookings using the correct API endpoints
       final futures = await Future.wait([
-        BookingService.getBookings(paymentStatus: "deposit_paid"),
-        BookingService.getBookings(status: "pending"),
-        BookingService.getBookings(status: "completed"),
+        BookingService.getBookings(
+            paymentStatus: "fully_paid"), // Open: Full payment completed
+        BookingService.getBookings(
+            paymentStatus: "deposit_paid"), // Pending: Part payment
+        BookingService.getBookings(
+            status: "completed"), // Completed: Service completed
       ]);
 
       setState(() {
@@ -48,9 +63,11 @@ class _BookingTabState extends NyState<BookingTab>
         loading = false;
       });
 
-      print('Loaded ${openAppointments.length} open appointments');
-      print('Loaded ${pendingAppointments.length} pending appointments');
-      print('Loaded ${closedAppointments.length} closed appointments');
+      print('Loaded ${openAppointments.length} open appointments (fully_paid)');
+      print(
+          'Loaded ${pendingAppointments.length} pending appointments (deposit_paid)');
+      print(
+          'Loaded ${closedAppointments.length} completed appointments (status=completed)');
     } catch (e) {
       setState(() {
         error = 'Failed to load bookings: $e';
@@ -99,7 +116,7 @@ class _BookingTabState extends NyState<BookingTab>
           tabs: [
             Tab(text: "Open (${openAppointments.length})"),
             Tab(text: "Pending (${pendingAppointments.length})"),
-            Tab(text: "Closed (${closedAppointments.length})"),
+            Tab(text: "Completed (${closedAppointments.length})"),
           ],
         ),
       ),
@@ -197,17 +214,17 @@ class _BookingTabState extends NyState<BookingTab>
     switch (type) {
       case "pending":
         title = "No Pending Appointments";
-        subtitle = "You have no appointments awaiting confirmation.";
+        subtitle = "You have no appointments with partial payments.";
         iconData = Icons.schedule;
         break;
       case "closed":
-        title = "No Closed Appointments";
+        title = "No Completed Appointments";
         subtitle = "You have no completed appointments yet.";
         iconData = Icons.check_circle_outline;
         break;
       default:
-        title = "No Upcoming Appointments";
-        subtitle = "You have no confirmed appointments scheduled.";
+        title = "No Open Appointments";
+        subtitle = "You have no appointments with full payment completed.";
         iconData = Icons.event_available;
     }
 
@@ -331,7 +348,7 @@ class _BookingTabState extends NyState<BookingTab>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "£${booking.totalAmount?.toStringAsFixed(0) ?? '0'}",
+                    "$_currencySymbol${booking.totalAmount?.toStringAsFixed(0) ?? '0'}",
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

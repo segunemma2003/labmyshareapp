@@ -1,5 +1,7 @@
 import 'package:flutter_app/app/networking/region_api_service.dart';
 import 'package:flutter_app/app/models/region.dart';
+import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/config/keys.dart';
 
 class RegionService {
   static final RegionApiService _api = RegionApiService();
@@ -40,6 +42,43 @@ class RegionService {
     } catch (e) {
       print('RegionService.getRegion error: $e');
       return null;
+    }
+  }
+
+  /// Get the current region from storage
+  static Future<Region?> getCurrentRegion() async {
+    try {
+      final regionCode = await NyStorage.read(Keys.currentRegion);
+      if (regionCode != null) {
+        return await getRegion(code: regionCode);
+      }
+      return null;
+    } catch (e) {
+      print('RegionService.getCurrentRegion error: $e');
+      return null;
+    }
+  }
+
+  /// Get the current region's currency symbol
+  static Future<String> getCurrentCurrencySymbol() async {
+    try {
+      final region = await getCurrentRegion();
+      return region?.currencySymbol ?? '£'; // Default to £ if no symbol found
+    } catch (e) {
+      print('RegionService.getCurrentCurrencySymbol error: $e');
+      return '£'; // Default fallback
+    }
+  }
+
+  /// Format a price with the current region's currency symbol
+  static Future<String> formatPrice(dynamic price) async {
+    try {
+      final symbol = await getCurrentCurrencySymbol();
+      final numericPrice = double.tryParse(price.toString()) ?? 0.0;
+      return '$symbol${numericPrice.toStringAsFixed(0)}';
+    } catch (e) {
+      print('RegionService.formatPrice error: $e');
+      return '£${price.toString()}'; // Default fallback
     }
   }
 }
