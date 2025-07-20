@@ -54,20 +54,36 @@ class _BookingTabState extends NyState<BookingTab>
             paymentStatus: "deposit_paid"), // Pending: Part payment
         BookingService.getBookings(
             status: "completed"), // Completed: Service completed
+        BookingService.getBookings(status: "cancelled"), // Cancelled bookings
       ]);
 
+      // Filter out cancelled bookings from open appointments (they should be in completed)
+      final openBookings =
+          futures[0].where((booking) => booking.status != 'cancelled').toList();
+
+      // Get cancelled bookings that are fully paid
+      final cancelledFullyPaid = futures[3]
+          .where((booking) =>
+              booking.status == 'cancelled' &&
+              booking.paymentStatus == 'fully_paid')
+          .toList();
+
+      // Combine completed and cancelled fully paid bookings
+      final allCompleted = [...futures[2], ...cancelledFullyPaid];
+
       setState(() {
-        openAppointments = futures[0];
+        openAppointments = openBookings;
         pendingAppointments = futures[1];
-        closedAppointments = futures[2];
+        closedAppointments = allCompleted;
         loading = false;
       });
 
-      print('Loaded ${openAppointments.length} open appointments (fully_paid)');
+      print(
+          'Loaded ${openAppointments.length} open appointments (fully_paid, not cancelled)');
       print(
           'Loaded ${pendingAppointments.length} pending appointments (deposit_paid)');
       print(
-          'Loaded ${closedAppointments.length} completed appointments (status=completed)');
+          'Loaded ${closedAppointments.length} completed/cancelled appointments (${futures[2].length} completed + ${cancelledFullyPaid.length} cancelled fully paid)');
     } catch (e) {
       setState(() {
         error = 'Failed to load bookings: $e';
@@ -116,7 +132,7 @@ class _BookingTabState extends NyState<BookingTab>
           tabs: [
             Tab(text: "Open (${openAppointments.length})"),
             Tab(text: "Pending (${pendingAppointments.length})"),
-            Tab(text: "Completed (${closedAppointments.length})"),
+            Tab(text: "Completed/Cancelled (${closedAppointments.length})"),
           ],
         ),
       ),
@@ -218,8 +234,8 @@ class _BookingTabState extends NyState<BookingTab>
         iconData = Icons.schedule;
         break;
       case "closed":
-        title = "No Completed Appointments";
-        subtitle = "You have no completed appointments yet.";
+        title = "No Completed/Cancelled Appointments";
+        subtitle = "You have no completed or cancelled appointments yet.";
         iconData = Icons.check_circle_outline;
         break;
       default:

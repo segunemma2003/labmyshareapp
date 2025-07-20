@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_app/app/services/booking_service.dart';
 import 'package:flutter_app/app/services/region_service.dart';
+import 'package:add_2_calendar/add_2_calendar.dart';
 import 'dart:convert';
 
 class ReviewPage extends NyStatefulWidget {
@@ -17,6 +18,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
   final TextEditingController _noteController = TextEditingController();
   String selectedPaymentOption = "deposit"; // "full" or "deposit"
   bool showSuccessPage = false;
+  bool calendarAdded = false; // Track if calendar has been added
 
   bool isStripeInitialized = false;
   // Remove dummy data, use real booking data
@@ -379,7 +381,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          "Review and confirm",
+          "Booking Confirmed",
           style: TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -408,7 +410,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(
-                  Icons.calendar_today,
+                  Icons.check_circle,
                   size: 60,
                   color: Colors.green.shade600,
                 ),
@@ -418,7 +420,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
 
               // Success message
               const Text(
-                "You have successfully booked an appointment.",
+                "Booking Confirmed!",
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
@@ -427,7 +429,81 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                 textAlign: TextAlign.center,
               ),
 
-              const SizedBox(height: 60),
+              const SizedBox(height: 16),
+
+              Text(
+                "Your appointment has been successfully booked.",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 40),
+
+              // Add to Calendar button (only show if not already added)
+              // if (!calendarAdded) ...[
+              //   Container(
+              //     width: double.infinity,
+              //     height: 56,
+              //     child: ElevatedButton(
+              //       onPressed: _addToCalendar,
+              //       style: ElevatedButton.styleFrom(
+              //         backgroundColor: Colors.black,
+              //         shape: RoundedRectangleBorder(
+              //           borderRadius: BorderRadius.circular(8),
+              //         ),
+              //       ),
+              //       child: Row(
+              //         mainAxisAlignment: MainAxisAlignment.center,
+              //         children: [
+              //           Icon(Icons.calendar_today,
+              //               color: Colors.white, size: 20),
+              //           SizedBox(width: 8),
+              //           Text(
+              //             "Add to Calendar",
+              //             style: TextStyle(
+              //               color: Colors.white,
+              //               fontSize: 16,
+              //               fontWeight: FontWeight.w600,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              //   const SizedBox(height: 16),
+              // ] else ...[
+              //   // Show success message when calendar is added
+              //   Container(
+              //     width: double.infinity,
+              //     padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              //     decoration: BoxDecoration(
+              //       color: Colors.green.shade50,
+              //       borderRadius: BorderRadius.circular(8),
+              //       border: Border.all(color: Colors.green.shade200),
+              //     ),
+              //     child: Row(
+              //       mainAxisAlignment: MainAxisAlignment.center,
+              //       children: [
+              //         Icon(Icons.check_circle,
+              //             color: Colors.green.shade600, size: 20),
+              //         SizedBox(width: 8),
+              //         Text(
+              //           "Added to Calendar",
+              //           style: TextStyle(
+              //             color: Colors.green.shade700,
+              //             fontSize: 16,
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+
+              //   const SizedBox(height: 16),
+              // ],
 
               // Go to appointment button
               Container(
@@ -446,7 +522,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                     ),
                   ),
                   child: const Text(
-                    "Go to appointment",
+                    "View My Bookings",
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 16,
@@ -460,6 +536,95 @@ class _ReviewPageState extends NyPage<ReviewPage> {
         ),
       ),
     );
+  }
+
+  void _addToCalendar() {
+    if (selectedDate == null || selectedTime == null) {
+      showToast(
+        title: "Error",
+        description: "Booking details not available",
+        style: ToastNotificationStyleType.danger,
+      );
+      return;
+    }
+
+    try {
+      // Parse the time to get hours and minutes
+      final timeParts = _formatScheduledTime(selectedTime).split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+
+      // Create start and end times
+      final startTime = DateTime(
+        selectedDate!.year,
+        selectedDate!.month,
+        selectedDate!.day,
+        hour,
+        minute,
+      );
+
+      // Calculate end time based on service duration
+      int totalDuration = 60; // Default 1 hour
+      if (services.isNotEmpty && services.first.durationMinutes != null) {
+        totalDuration = services.first.durationMinutes!;
+      }
+      final endTime = startTime.add(Duration(minutes: totalDuration));
+
+      // Create calendar event
+      final Event event = Event(
+        title: 'Beauty Spa Appointment',
+        description: _buildCalendarDescription(),
+        location: 'Labs by Shea',
+        startDate: startTime,
+        endDate: endTime,
+        androidParams: AndroidParams(
+          emailInvites: [], // Add emails if you want to invite people
+        ),
+        iosParams: IOSParams(
+          reminder: Duration(minutes: 30), // 30 minutes before
+        ),
+      );
+
+      // Add to calendar
+      Add2Calendar.addEvent2Cal(event);
+
+      // Mark calendar as added
+      setState(() {
+        calendarAdded = true;
+      });
+
+      showToast(
+        title: "Success",
+        description: "Appointment added to your calendar",
+        style: ToastNotificationStyleType.success,
+      );
+    } catch (e) {
+      print('Error adding to calendar: $e');
+      showToast(
+        title: "Error",
+        description: "Could not add to calendar. Please try again.",
+        style: ToastNotificationStyleType.danger,
+      );
+    }
+  }
+
+  String _buildCalendarDescription() {
+    final serviceNames = services.map((s) => s.name ?? '').join(', ');
+    final professionalName = selectedProfessional?.name ?? 'Professional';
+
+    String description = 'Appointment with $professionalName\n';
+    description += 'Services: $serviceNames\n';
+
+    if (_friendDetails.isNotEmpty &&
+        (_friendDetails['name']?.isNotEmpty ?? false)) {
+      description += 'Booking for: ${_friendDetails['name']}\n';
+    }
+
+    if (_noteController.text.isNotEmpty) {
+      description += 'Notes: ${_noteController.text}';
+    }
+
+    return description;
   }
 
   String _formatDate() {
@@ -492,223 +657,251 @@ class _ReviewPageState extends NyPage<ReviewPage> {
     }
   }
 
-  void _showBookForFriendSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        final nameController =
-            TextEditingController(text: _friendDetails['name'] ?? '');
-        final phoneController =
-            TextEditingController(text: _friendDetails['phone'] ?? '');
-        final emailController =
-            TextEditingController(text: _friendDetails['email'] ?? '');
+  void _showBookForFriendSheet() async {
+    // Create text controllers outside the builder to persist them
+    final nameController =
+        TextEditingController(text: _friendDetails['name'] ?? '');
+    final phoneController =
+        TextEditingController(text: _friendDetails['phone'] ?? '');
+    final emailController =
+        TextEditingController(text: _friendDetails['email'] ?? '');
 
-        // Validation state
-        String? nameError;
-        String? phoneError;
-        String? emailError;
+    // Validation state
+    String? nameError;
+    String? phoneError;
+    String? emailError;
 
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            void validateAndSave() {
-              // Reset errors
-              nameError = null;
-              phoneError = null;
-              emailError = null;
+    try {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        enableDrag: true,
+        isDismissible: true,
+        useSafeArea: true,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setModalState) {
+              void validateAndSave() {
+                // Reset errors
+                nameError = null;
+                phoneError = null;
+                emailError = null;
 
-              // Validate name
-              if (nameController.text.trim().isEmpty) {
-                nameError = 'Name is required';
-              }
+                // Validate name
+                if (nameController.text.trim().isEmpty) {
+                  nameError = 'Name is required';
+                }
 
-              // Validate phone
-              final phoneText = phoneController.text.trim();
-              if (phoneText.isEmpty) {
-                phoneError = 'Phone number is required';
-              } else if (phoneText.length < 8) {
-                phoneError =
-                    'Please enter a valid phone number (minimum 8 digits)';
-              } else if (!RegExp(r'^[0-9\s\-\(\)]+$').hasMatch(phoneText)) {
-                phoneError =
-                    'Please enter only numbers, spaces, hyphens, and parentheses';
-              }
+                // Validate phone
+                final phoneText = phoneController.text.trim();
+                if (phoneText.isEmpty) {
+                  phoneError = 'Phone number is required';
+                } else if (phoneText.length < 8) {
+                  phoneError =
+                      'Please enter a valid phone number (minimum 8 digits)';
+                } else if (!RegExp(r'^[0-9\s\-\(\)]+$').hasMatch(phoneText)) {
+                  phoneError =
+                      'Please enter only numbers, spaces, hyphens, and parentheses';
+                }
 
-              // Validate email (optional but if provided, must be valid)
-              final emailText = emailController.text.trim();
-              if (emailText.isNotEmpty) {
-                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-                if (!emailRegex.hasMatch(emailText)) {
-                  emailError = 'Please enter a valid email address';
+                // Validate email (optional but if provided, must be valid)
+                final emailText = emailController.text.trim();
+                if (emailText.isNotEmpty) {
+                  final emailRegex =
+                      RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                  if (!emailRegex.hasMatch(emailText)) {
+                    emailError = 'Please enter a valid email address';
+                  }
+                }
+
+                // If no errors, save and close
+                if (nameError == null &&
+                    phoneError == null &&
+                    emailError == null) {
+                  // Save the data first
+                  setState(() {
+                    _friendDetails = {
+                      'name': nameController.text.trim(),
+                      'phone': phoneController.text.trim(),
+                      'email': emailController.text.trim(),
+                    };
+                  });
+
+                  // Close modal first, then show toast
+                  Navigator.of(context).pop();
+
+                  // Show success message after modal is closed
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    showToast(
+                      title: "Success",
+                      description: "Friend details saved successfully",
+                      style: ToastNotificationStyleType.success,
+                    );
+                  });
+                } else {
+                  setModalState(() {}); // Refresh modal to show errors
                 }
               }
 
-              // If no errors, save and close
-              if (nameError == null &&
-                  phoneError == null &&
-                  emailError == null) {
-                setState(() {
-                  _friendDetails = {
-                    'name': nameController.text.trim(),
-                    'phone': phoneController.text.trim(),
-                    'email': emailController.text.trim(),
-                  };
-                });
-                Navigator.pop(context);
-                showToast(
-                  title: "Success",
-                  description: "Friend details saved successfully",
-                  style: ToastNotificationStyleType.success,
-                );
-              } else {
-                setModalState(() {}); // Refresh modal to show errors
+              // Handle modal dismissal
+              void handleDismiss() {
+                Navigator.of(context).pop();
               }
-            }
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        'Book for a friend',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Text('Who is booking it?',
-                        style: TextStyle(fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        labelText: 'Name*',
-                        hintText: 'Your name',
-                        border: OutlineInputBorder(),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                      ),
-                      controller: TextEditingController(
-                          text: 'Cassandra'), // Replace with actual user name
-                    ),
-                    SizedBox(height: 24),
-                    Divider(),
-                    SizedBox(height: 16),
-                    Text('Who are you booking for?',
-                        style: TextStyle(fontWeight: FontWeight.w500)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Name*',
-                        border: OutlineInputBorder(),
-                        errorText: nameError,
-                        errorBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        if (nameError != null) {
-                          nameError = null;
-                          setModalState(() {});
-                        }
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: phoneController,
-                      decoration: InputDecoration(
-                        labelText: 'Phone number*',
-                        prefixText: '+',
-                        border: OutlineInputBorder(),
-                        errorText: phoneError,
-                        errorBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red),
-                        ),
-                        hintText:
-                            'Country code and number (e.g., 44 7XXX XXX XXX)',
-                      ),
-                      keyboardType: TextInputType.phone,
-                      onChanged: (value) {
-                        if (phoneError != null) {
-                          phoneError = null;
-                          setModalState(() {});
-                        }
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      controller: emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email (optional)',
-                        hintText: 'example@email.com',
-                        border: OutlineInputBorder(),
-                        errorText: emailError,
-                        errorBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.red),
-                        ),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      onChanged: (value) {
-                        if (emailError != null) {
-                          emailError = null;
-                          setModalState(() {});
-                        }
-                      },
-                    ),
-                    SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: validateAndSave,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          'Save',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+              return Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
                 ),
-              ),
-            );
-          },
-        );
-      },
-    );
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          'Book for a friend',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Text('Who is booking it?',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      SizedBox(height: 8),
+                      TextField(
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: 'Name*',
+                          hintText: 'Your name',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                        ),
+                        controller: TextEditingController(
+                            text: 'Cassandra'), // Replace with actual user name
+                      ),
+                      SizedBox(height: 24),
+                      Divider(),
+                      SizedBox(height: 16),
+                      Text('Who are you booking for?',
+                          style: TextStyle(fontWeight: FontWeight.w500)),
+                      SizedBox(height: 8),
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Name*',
+                          border: OutlineInputBorder(),
+                          errorText: nameError,
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (nameError != null) {
+                            nameError = null;
+                            setModalState(() {});
+                          }
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        controller: phoneController,
+                        decoration: InputDecoration(
+                          labelText: 'Phone number*',
+                          prefixText: '+',
+                          border: OutlineInputBorder(),
+                          errorText: phoneError,
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                          hintText:
+                              'Country code and number (e.g., 44 7XXX XXX XXX)',
+                        ),
+                        keyboardType: TextInputType.phone,
+                        onChanged: (value) {
+                          if (phoneError != null) {
+                            phoneError = null;
+                            setModalState(() {});
+                          }
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      TextField(
+                        controller: emailController,
+                        decoration: InputDecoration(
+                          labelText: 'Email (optional)',
+                          hintText: 'example@email.com',
+                          border: OutlineInputBorder(),
+                          errorText: emailError,
+                          errorBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Colors.red),
+                          ),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                        onChanged: (value) {
+                          if (emailError != null) {
+                            emailError = null;
+                            setModalState(() {});
+                          }
+                        },
+                      ),
+                      SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: validateAndSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            'Save',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      // Dispose controllers when modal is dismissed
+      nameController.dispose();
+      phoneController.dispose();
+      emailController.dispose();
+    }
   }
 
   double safeDouble(num? value) =>
@@ -736,22 +929,37 @@ class _ReviewPageState extends NyPage<ReviewPage> {
           }
         }
 
-        print('Booking request body:');
-        print({
+        // Create the payload that will be sent to the backend
+        final bookingPayload = {
           "professional": selectedProfessional.id,
           "service": services.first.id,
-          "scheduledDate": DateFormat('yyyy-MM-dd').format(selectedDate!),
-          "scheduledTime": _formatScheduledTime(selectedTime),
-          "bookingForSelf": bookingForSelf,
+          "scheduled_date": DateFormat('yyyy-MM-dd').format(selectedDate!),
+          "scheduled_time": _formatScheduledTime(selectedTime),
+          "booking_for_self": bookingForSelf,
           if (!bookingForSelf) ...{
-            "recipientName": _friendDetails['name'],
-            "recipientPhone": _friendDetails['phone'],
-            "recipientEmail": _friendDetails['email'],
+            "recipient_name": _friendDetails['name'],
+            "recipient_phone": _friendDetails['phone'],
+            "recipient_email": _friendDetails['email'],
           },
-          "customerNotes": _noteController.text,
-          "selectedAddons": selectedAddons,
-          "paymentType": selectedPaymentOption == "full" ? "full" : "partial"
-        });
+          "address_line1": '', // Use empty string instead of null
+          "address_line2": '',
+          "city": '',
+          "postal_code": '',
+          "location_notes": null,
+          "customer_notes":
+              _noteController.text.isNotEmpty ? _noteController.text : null,
+          "selected_addons": selectedAddons.isNotEmpty ? selectedAddons : null,
+          "payment_type": selectedPaymentOption == "full" ? "full" : "partial"
+        };
+
+        // Print detailed booking payload
+        print('🔵 ===== BOOKING PAYLOAD SENT TO BACKEND =====');
+        print(
+            '📅 Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())}');
+        print('🌐 Endpoint: POST /bookings/create/');
+        print('📦 Payload:');
+        print(JsonEncoder.withIndent('  ').convert(bookingPayload));
+        print('🔵 ===== END BOOKING PAYLOAD =====');
 
         // Call booking API
         final response = await BookingService.createBooking(
@@ -774,7 +982,17 @@ class _ReviewPageState extends NyPage<ReviewPage> {
           paymentType: selectedPaymentOption == "full" ? "full" : "partial",
         );
 
-        print("Booking API response: $response");
+        // Print API response
+        print('🟢 ===== BOOKING API RESPONSE =====');
+        print(
+            '📅 Date: ${DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())}');
+        print('📦 Response:');
+        if (response != null) {
+          print(JsonEncoder.withIndent('  ').convert(response));
+        } else {
+          print('  null (No response received)');
+        }
+        print('🟢 ===== END BOOKING API RESPONSE =====');
 
         // Check if booking creation was successful
         if (response == null) {

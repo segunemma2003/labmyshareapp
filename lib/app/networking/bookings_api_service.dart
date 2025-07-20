@@ -168,21 +168,40 @@ class BookingsApiService extends NyApiService {
 
   Future<Map<String, dynamic>?> rescheduleBooking({
     required String bookingId,
-    required String requestedDate,
-    required String requestedTime,
     required String reason,
   }) async {
     try {
       return await network(
         request: (request) =>
             request.post("/bookings/$bookingId/reschedule/", data: {
-          "requested_date": requestedDate,
-          "requested_time": requestedTime,
           "reason": reason,
         }),
       );
     } catch (e) {
       print('BookingsApiService.rescheduleBooking error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> completePayment({
+    required String bookingId,
+    required String paymentType,
+    String? paymentMethodId,
+  }) async {
+    try {
+      Map<String, dynamic> data = {
+        "booking_id": bookingId,
+        "payment_type": paymentType,
+      };
+      if (paymentMethodId != null) {
+        data["payment_method_id"] = paymentMethodId;
+      }
+
+      return await network(
+        request: (request) => request.post("/payments/complete/", data: data),
+      );
+    } catch (e) {
+      print('BookingsApiService.completePayment error: $e');
       rethrow;
     }
   }
