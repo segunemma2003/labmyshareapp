@@ -134,21 +134,35 @@ class BookingService {
 
   static Future<bool> rescheduleBooking({
     required String bookingId,
-    required String requestedDate,
-    required String requestedTime,
     required String reason,
   }) async {
     try {
       final result = await _api.rescheduleBooking(
         bookingId: bookingId,
-        requestedDate: requestedDate,
-        requestedTime: requestedTime,
         reason: reason,
       );
       return result != null;
     } catch (e) {
       print('Reschedule booking error: $e');
       return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> completePayment({
+    required String bookingId,
+    required String paymentType,
+    String? paymentMethodId,
+  }) async {
+    try {
+      final result = await _api.completePayment(
+        bookingId: bookingId,
+        paymentType: paymentType,
+        paymentMethodId: paymentMethodId,
+      );
+      return result;
+    } catch (e) {
+      print('Complete payment error: $e');
+      return null;
     }
   }
 
