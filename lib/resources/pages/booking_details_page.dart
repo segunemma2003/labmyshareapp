@@ -5,6 +5,7 @@ import '../../app/models/booking.dart';
 import 'package:intl/intl.dart';
 import 'package:add_2_calendar/add_2_calendar.dart';
 import 'dart:io' show Platform;
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 class BookingDetailsPage extends NyStatefulWidget {
   static RouteView path = ("/booking-details", (_) => BookingDetailsPage());
@@ -1416,7 +1417,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
         ),
       );
 
-      // Complete payment
+      // Complete payment (get payment intent)
       final result = await BookingService.completePayment(
         bookingId: booking!.bookingId!,
         paymentType: 'remaining',
@@ -1426,8 +1427,35 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       Navigator.pop(context);
 
       if (result != null && result['success'] == true) {
-        // Payment successful
-        _showPaymentSuccessSheet();
+        final stripeClientSecret =
+            result["client_secret"] ?? result["stripe_client_secret"];
+        final stripePaymentIntentId =
+            result["payment_intent_id"] ?? result["stripe_payment_intent_id"];
+
+        if (stripeClientSecret == null || stripePaymentIntentId == null) {
+          showToast(
+            title: "Payment setup failed",
+            description: "Could not initialize payment. Please try again.",
+            style: ToastNotificationStyleType.danger,
+          );
+          return;
+        }
+
+        // Initialize Stripe if needed
+        await _initializeStripe();
+
+        // Present Stripe payment sheet
+        final paymentSuccess = await _processStripePayment(stripeClientSecret);
+
+        if (paymentSuccess) {
+          _showPaymentSuccessSheet();
+        } else {
+          showToast(
+            title: "Payment Failed",
+            description: "Could not complete payment. Please try again.",
+            style: ToastNotificationStyleType.danger,
+          );
+        }
       } else {
         showToast(
           title: "Payment Failed",
@@ -1443,6 +1471,75 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
         description: "An error occurred during payment: $e",
         style: ToastNotificationStyleType.danger,
       );
+    }
+  }
+
+  // Stripe initialization (copied from review_page.dart)
+  bool isStripeInitialized = false;
+  Future<void> _initializeStripe() async {
+    if (isStripeInitialized) return;
+    try {
+      final String stripePublishableKey =
+          getEnv('STRIPE_PUBLISHABLE_KEY', defaultValue: '');
+      if (stripePublishableKey.isEmpty) {
+        throw Exception('STRIPE_PUBLISHABLE_KEY not found in .env file');
+      }
+      Stripe.publishableKey = stripePublishableKey;
+      Stripe.merchantIdentifier = 'merchant.com.labsbyshea';
+      Stripe.urlScheme = 'flutterstripe';
+      isStripeInitialized = true;
+    } catch (e) {
+      isStripeInitialized = false;
+      print('Failed to initialize Stripe: $e');
+    }
+  }
+
+  // Stripe payment sheet logic (copied from review_page.dart)
+  Future<bool> _processStripePayment(String clientSecret) async {
+    if (!isStripeInitialized ||
+        Stripe.publishableKey == null ||
+        Stripe.publishableKey!.isEmpty) {
+      showToast(
+        title: "Configuration error",
+        description: "Payment system is not ready. Please try again.",
+      );
+      return false;
+    }
+    try {
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: clientSecret,
+          merchantDisplayName: 'Labs by Shea',
+          style: ThemeMode.system,
+          appearance: PaymentSheetAppearance(
+            colors: PaymentSheetAppearanceColors(
+              primary: Colors.black,
+            ),
+          ),
+          allowsDelayedPaymentMethods: true,
+          billingDetailsCollectionConfiguration:
+              const BillingDetailsCollectionConfiguration(
+            name: CollectionMode.always,
+            email: CollectionMode.always,
+          ),
+        ),
+      );
+      await Stripe.instance.presentPaymentSheet();
+      return true;
+    } on StripeException catch (e) {
+      showToast(
+        title: "Payment error",
+        description: e.error.localizedMessage ??
+            "An error occurred during payment. Please try again.",
+      );
+      return false;
+    } catch (e) {
+      showToast(
+        title: "Payment error",
+        description:
+            "An unexpected error occurred during payment. Please try again.",
+      );
+      return false;
     }
   }
 
