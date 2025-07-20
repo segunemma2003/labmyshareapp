@@ -1,4 +1,5 @@
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 
 enum AddOnType {
   optional,
@@ -47,6 +48,12 @@ class AddOnService extends Model {
   // Helper methods
   String get formattedPrice {
     return "${priceType ?? 'From'} £${price.toInt()}";
+  }
+
+  // Dynamic currency formatted price
+  Future<String> getFormattedPriceWithCurrency() async {
+    final symbol = await RegionService.getCurrentCurrencySymbol();
+    return "${priceType ?? 'From'} $symbol${price.toInt()}";
   }
 
   bool get isRecommended {

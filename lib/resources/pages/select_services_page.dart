@@ -4,6 +4,7 @@ import 'package:flutter_app/app/services/services_data_service.dart';
 import 'package:flutter_app/resources/widgets/service_details_bottom_sheet_widget.dart'
     show ServiceDetailsBottomSheet;
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 
 class SelectServicesPage extends NyStatefulWidget {
   static RouteView path = ("/select-services", (_) => SelectServicesPage());
@@ -23,13 +24,38 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
   bool _loadingServices = true;
   bool _errorCategories = false;
   bool _errorServices = false;
+  String _currencySymbol = '£'; // Default currency symbol
 
   @override
   get init => () async {
         final navData = widget.data() ?? {};
-        int? initialCategoryId = navData['categoryId'] as int?;
+
+        // Handle different ways the category might be passed
+        int? initialCategoryId;
+        ServiceCategory? initialCategory;
+
+        if (navData['categoryId'] != null) {
+          initialCategoryId = navData['categoryId'] as int?;
+        } else if (navData['initialCategory'] != null) {
+          initialCategory = navData['initialCategory'] as ServiceCategory;
+          initialCategoryId = initialCategory.id;
+        } else if (navData['activeCategory'] != null) {
+          initialCategory = navData['activeCategory'] as ServiceCategory;
+          initialCategoryId = initialCategory.id;
+        }
+
+        await _loadCurrencySymbol();
         await _loadCategories(initialCategoryId: initialCategoryId);
       };
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      _currencySymbol = await RegionService.getCurrentCurrencySymbol();
+    } catch (e) {
+      print('Error loading currency symbol: $e');
+      _currencySymbol = '£'; // Default fallback
+    }
+  }
 
   Future<void> _loadCategories({int? initialCategoryId}) async {
     setState(() {
@@ -39,28 +65,44 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
     try {
       final categories = await ServicesDataService.getServiceCategories();
       ServiceCategory? selected;
+
+      print(
+          'SelectServicesPage: Loading categories with initialCategoryId: $initialCategoryId');
+      print(
+          'SelectServicesPage: Available categories: ${categories.map((c) => '${c.id}: ${c.name}').toList()}');
+
       if (initialCategoryId != null) {
         if (categories.isNotEmpty) {
           selected = categories.firstWhere(
             (c) => c.id == initialCategoryId,
             orElse: () => categories.first,
           );
+          print(
+              'SelectServicesPage: Selected category: ${selected?.name} (ID: ${selected?.id})');
         } else {
           selected = null;
+          print('SelectServicesPage: No categories available');
         }
       } else {
         selected = categories.isNotEmpty ? categories.first : null;
+        print(
+            'SelectServicesPage: No initial category ID, using first: ${selected?.name}');
       }
+
       setState(() {
         _categories = categories;
         _selectedCategory = selected;
         _loadingCategories = false;
       });
+
       if (_selectedCategory != null) {
+        print(
+            'SelectServicesPage: Loading services for category: ${_selectedCategory!.name}');
         await _loadServices(_selectedCategory!.id);
         await _loadCategoryAddOns(_selectedCategory!.id);
       }
     } catch (e) {
+      print('SelectServicesPage: Error loading categories: $e');
       setState(() {
         _loadingCategories = false;
         _errorCategories = true;
@@ -150,8 +192,12 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
                             final category = _categories[index];
                             final isSelected =
                                 _selectedCategory?.id == category.id;
+                            print(
+                                'SelectServicesPage: Category tab "${category.name}" (ID: ${category.id}) - isSelected: $isSelected');
                             return GestureDetector(
                               onTap: () async {
+                                print(
+                                    'SelectServicesPage: Tapped category "${category.name}" (ID: ${category.id})');
                                 setState(() {
                                   _selectedCategory = category;
                                 });
@@ -278,7 +324,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
                 SizedBox(height: 8),
                 Text(
                   service.regionalPrice != null
-                      ? "From £${service.regionalPrice!.toStringAsFixed(2)}"
+                      ? "From $_currencySymbol${service.regionalPrice!.toStringAsFixed(2)}"
                       : "",
                   style: TextStyle(
                     fontSize: 16,
@@ -333,7 +379,7 @@ class _SelectServicesPageState extends NyPage<SelectServicesPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "£${totalPrice.toStringAsFixed(2)}",
+                  "$_currencySymbol${totalPrice.toStringAsFixed(2)}",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

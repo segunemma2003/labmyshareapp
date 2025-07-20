@@ -161,35 +161,35 @@ class _ProfileTabState extends NyState<ProfileTab> {
   //   // Navigate to user reviews page
   // }
 
-  void _openInstagram() async {
-    const url =
-        'https://www.instagram.com/thehairspaclinic?igsh=em5lOWx0MGE4OW9w';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      showToast(
-        title: "Error",
-        description: "Could not open Instagram.",
-        style: ToastNotificationStyleType.danger,
-      );
-    }
-  }
+  // void _openInstagram() async {
+  //   const url =
+  //       'https://www.instagram.com/thehairspaclinic?igsh=em5lOWx0MGE4OW9w';
+  //   if (await canLaunchUrl(Uri.parse(url))) {
+  //     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  //   } else {
+  //     showToast(
+  //       title: "Error",
+  //       description: "Could not open Instagram.",
+  //       style: ToastNotificationStyleType.danger,
+  //     );
+  //   }
+  // }
 
-  void _sendEmail() async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: 'info@thehairspaclinic.com',
-    );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      showToast(
-        title: "Error",
-        description: "Could not open email app.",
-        style: ToastNotificationStyleType.danger,
-      );
-    }
-  }
+  // void _sendEmail() async {
+  //   final Uri emailUri = Uri(
+  //     scheme: 'mailto',
+  //     path: 'info@thehairspaclinic.com',
+  //   );
+  //   if (await canLaunchUrl(emailUri)) {
+  //     await launchUrl(emailUri);
+  //   } else {
+  //     showToast(
+  //       title: "Error",
+  //       description: "Could not open email app.",
+  //       style: ToastNotificationStyleType.danger,
+  //     );
+  //   }
+  // }
 
   Widget _buildErrorState() {
     return Center(
@@ -406,16 +406,7 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 title: "Legal",
                 onTap: _navigateToLegal,
               ),
-              _buildProfileOption(
-                icon: Icons.email_outlined,
-                title: "Email",
-                onTap: _sendEmail,
-              ),
-              _buildProfileOption(
-                icon: Icons.camera_alt_outlined,
-                title: "Instagram",
-                onTap: _openInstagram,
-              ),
+
               // _buildProfileOption(
               //   icon: Icons.rate_review_outlined,
               //   title: "Reviews",

@@ -4,6 +4,9 @@ class Region {
   final String? name;
   final String? description;
   final bool? isActive;
+  final String? currency;
+  final String? currencySymbol;
+  final String? timezone;
   final String? createdAt;
   final String? updatedAt;
 
@@ -13,6 +16,9 @@ class Region {
     this.name,
     this.description,
     this.isActive,
+    this.currency,
+    this.currencySymbol,
+    this.timezone,
     this.createdAt,
     this.updatedAt,
   });
@@ -25,6 +31,9 @@ class Region {
         name: json['name']?.toString(),
         description: json['description']?.toString(),
         isActive: json['is_active'] ?? true,
+        currency: json['currency']?.toString(),
+        currencySymbol: json['currency_symbol']?.toString(),
+        timezone: json['timezone']?.toString(),
         createdAt: json['created_at']?.toString(),
         updatedAt: json['updated_at']?.toString(),
       );
@@ -42,6 +51,9 @@ class Region {
       'name': name,
       'description': description,
       'is_active': isActive,
+      'currency': currency,
+      'currency_symbol': currencySymbol,
+      'timezone': timezone,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };

@@ -4,6 +4,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_app/app/services/booking_service.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 import 'dart:convert';
 
 class ReviewPage extends NyStatefulWidget {
@@ -28,6 +29,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
   String durationText = '';
 
   Map<String, String?> _friendDetails = {};
+  String _currencySymbol = '£'; // Default currency symbol
 
   @override
   get init => () async {
@@ -42,11 +44,21 @@ class _ReviewPageState extends NyPage<ReviewPage> {
         durationText = data['durationText'] ?? '';
 
         await _initializeStripe();
+        await _loadCurrencySymbol();
         setState(() {});
       };
 
   int get depositAmount => (totalPrice * 0.5).roundToDouble().toInt();
   int get balanceAmount => totalPrice.toInt() - depositAmount;
+
+  Future<void> _loadCurrencySymbol() async {
+    try {
+      _currencySymbol = await RegionService.getCurrentCurrencySymbol();
+    } catch (e) {
+      print('Error loading currency symbol: $e');
+      _currencySymbol = '£'; // Default fallback
+    }
+  }
 
   Future<void> _initializeStripe() async {
     try {
@@ -169,7 +181,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                       context: context,
                       setModalState: setModalState,
                       title: "Make full payment",
-                      subtitle: "Balance £0 at the venue",
+                      subtitle: "Balance $_currencySymbol 0 at the venue",
                       amount: totalPrice.toInt(),
                       value: "full",
                       isSelected: selectedPaymentOption == "full",
@@ -181,7 +193,8 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                       context: context,
                       setModalState: setModalState,
                       title: "Make 50% deposit",
-                      subtitle: "Balance £$balanceAmount at the venue",
+                      subtitle:
+                          "Balance $_currencySymbol$balanceAmount at the venue",
                       amount: depositAmount,
                       value: "deposit",
                       isSelected: selectedPaymentOption == "deposit",
@@ -343,7 +356,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
               ),
             ),
             Text(
-              "£$amount",
+              "$_currencySymbol$amount",
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -493,116 +506,206 @@ class _ReviewPageState extends NyPage<ReviewPage> {
             TextEditingController(text: _friendDetails['phone'] ?? '');
         final emailController =
             TextEditingController(text: _friendDetails['email'] ?? '');
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Text(
-                    'Book for a friend',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                SizedBox(height: 24),
-                Text('Who is booking it?',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
-                SizedBox(height: 8),
-                TextField(
-                  enabled: false,
-                  decoration: InputDecoration(
-                    labelText: 'Name*',
-                    hintText: 'Your name',
-                    border: OutlineInputBorder(),
-                  ),
-                  controller: TextEditingController(
-                      text: 'Cassandra'), // Replace with actual user name
-                ),
-                SizedBox(height: 24),
-                Divider(),
-                SizedBox(height: 16),
-                Text('Who are you booking for?',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
-                SizedBox(height: 8),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Name*',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: phoneController,
-                  decoration: InputDecoration(
-                    labelText: 'Phone number*',
-                    prefixText: '+44  ',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.phone,
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'example@email.com',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _friendDetails = {
-                          'name': nameController.text,
-                          'phone': phoneController.text,
-                          'email': emailController.text,
-                        };
-                      });
-                      Navigator.pop(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+
+        // Validation state
+        String? nameError;
+        String? phoneError;
+        String? emailError;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            void validateAndSave() {
+              // Reset errors
+              nameError = null;
+              phoneError = null;
+              emailError = null;
+
+              // Validate name
+              if (nameController.text.trim().isEmpty) {
+                nameError = 'Name is required';
+              }
+
+              // Validate phone
+              final phoneText = phoneController.text.trim();
+              if (phoneText.isEmpty) {
+                phoneError = 'Phone number is required';
+              } else if (phoneText.length < 8) {
+                phoneError =
+                    'Please enter a valid phone number (minimum 8 digits)';
+              } else if (!RegExp(r'^[0-9\s\-\(\)]+$').hasMatch(phoneText)) {
+                phoneError =
+                    'Please enter only numbers, spaces, hyphens, and parentheses';
+              }
+
+              // Validate email (optional but if provided, must be valid)
+              final emailText = emailController.text.trim();
+              if (emailText.isNotEmpty) {
+                final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                if (!emailRegex.hasMatch(emailText)) {
+                  emailError = 'Please enter a valid email address';
+                }
+              }
+
+              // If no errors, save and close
+              if (nameError == null &&
+                  phoneError == null &&
+                  emailError == null) {
+                setState(() {
+                  _friendDetails = {
+                    'name': nameController.text.trim(),
+                    'phone': phoneController.text.trim(),
+                    'email': emailController.text.trim(),
+                  };
+                });
+                Navigator.pop(context);
+                showToast(
+                  title: "Success",
+                  description: "Friend details saved successfully",
+                  style: ToastNotificationStyleType.success,
+                );
+              } else {
+                setModalState(() {}); // Refresh modal to show errors
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
-                    child: Text(
-                      'Save',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    Center(
+                      child: Text(
+                        'Book for a friend',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
+                    SizedBox(height: 24),
+                    Text('Who is booking it?',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 8),
+                    TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        labelText: 'Name*',
+                        hintText: 'Your name',
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                      ),
+                      controller: TextEditingController(
+                          text: 'Cassandra'), // Replace with actual user name
+                    ),
+                    SizedBox(height: 24),
+                    Divider(),
+                    SizedBox(height: 16),
+                    Text('Who are you booking for?',
+                        style: TextStyle(fontWeight: FontWeight.w500)),
+                    SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Name*',
+                        border: OutlineInputBorder(),
+                        errorText: nameError,
+                        errorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red),
+                        ),
+                      ),
+                      onChanged: (value) {
+                        if (nameError != null) {
+                          nameError = null;
+                          setModalState(() {});
+                        }
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: phoneController,
+                      decoration: InputDecoration(
+                        labelText: 'Phone number*',
+                        prefixText: '+',
+                        border: OutlineInputBorder(),
+                        errorText: phoneError,
+                        errorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red),
+                        ),
+                        hintText:
+                            'Country code and number (e.g., 44 7XXX XXX XXX)',
+                      ),
+                      keyboardType: TextInputType.phone,
+                      onChanged: (value) {
+                        if (phoneError != null) {
+                          phoneError = null;
+                          setModalState(() {});
+                        }
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    TextField(
+                      controller: emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email (optional)',
+                        hintText: 'example@email.com',
+                        border: OutlineInputBorder(),
+                        errorText: emailError,
+                        errorBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red),
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      onChanged: (value) {
+                        if (emailError != null) {
+                          emailError = null;
+                          setModalState(() {});
+                        }
+                      },
+                    ),
+                    SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: validateAndSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Save',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -1050,7 +1153,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                                 ),
                               ),
                               Text(
-                                "£${service.regionalPrice?.toStringAsFixed(0) ?? '0'}",
+                                "$_currencySymbol${service.regionalPrice?.toStringAsFixed(0) ?? '0'}",
                                 style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -1103,7 +1206,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                                       ),
                                     ),
                                     Text(
-                                      "£${double.tryParse(addOn.price ?? '0')?.toStringAsFixed(0) ?? '0'}",
+                                      "$_currencySymbol${double.tryParse(addOn.price ?? '0')?.toStringAsFixed(0) ?? '0'}",
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey.shade700,
@@ -1138,7 +1241,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                             ),
                           ),
                           Text(
-                            "£${totalPrice.toStringAsFixed(0)}",
+                            "$_currencySymbol${totalPrice.toStringAsFixed(0)}",
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -1158,7 +1261,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                             ),
                           ),
                           Text(
-                            "£$depositAmount",
+                            "$_currencySymbol$depositAmount",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade700,
@@ -1178,7 +1281,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                             ),
                           ),
                           Text(
-                            "£$balanceAmount",
+                            "$_currencySymbol$balanceAmount",
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade700,
@@ -1197,8 +1300,15 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
+                        border: Border.all(
+                          color: _friendDetails.isNotEmpty
+                              ? Colors.green.shade300
+                              : Colors.grey.shade300,
+                        ),
                         borderRadius: BorderRadius.circular(12),
+                        color: _friendDetails.isNotEmpty
+                            ? Colors.green.shade50
+                            : Colors.white,
                       ),
                       child: Row(
                         children: [
@@ -1206,29 +1316,57 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
+                              color: _friendDetails.isNotEmpty
+                                  ? Colors.green.shade100
+                                  : Colors.grey.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
-                              Icons.person_add,
+                              _friendDetails.isNotEmpty
+                                  ? Icons.person
+                                  : Icons.person_add,
                               size: 20,
-                              color: Colors.grey.shade600,
+                              color: _friendDetails.isNotEmpty
+                                  ? Colors.green.shade700
+                                  : Colors.grey.shade600,
                             ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'Book for a friend',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _friendDetails.isNotEmpty
+                                      ? 'Book for a friend'
+                                      : 'Book for a friend',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: _friendDetails.isNotEmpty
+                                        ? Colors.green.shade700
+                                        : Colors.black,
+                                  ),
+                                ),
+                                if (_friendDetails.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_friendDetails['name']} • ${_friendDetails['phone']}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.green.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                           Icon(
                             Icons.arrow_forward_ios,
                             size: 16,
-                            color: Colors.grey.shade600,
+                            color: _friendDetails.isNotEmpty
+                                ? Colors.green.shade600
+                                : Colors.grey.shade600,
                           ),
                         ],
                       ),
@@ -1326,7 +1464,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        "£${totalPrice.toStringAsFixed(0)}",
+                        "$_currencySymbol${totalPrice.toStringAsFixed(0)}",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
