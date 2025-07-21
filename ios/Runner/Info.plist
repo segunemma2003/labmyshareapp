@@ -2,6 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.beautyspabyshea.refresh</string>
+		<string>com.beautyspabyshea.processing</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -18,23 +23,6 @@
 	<array>
 		<string>en</string>
 	</array>
-	<key>CFBundleURLTypes</key>
-<array>
-    <dict>
-        <key>CFBundleURLName</key>
-        <string>REVERSED_CLIENT_ID</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-            <string>YOUR_REVERSED_CLIENT_ID_FROM_GOOGLESERVICE_INFO_PLIST</string>
-        </array>
-    </dict>
-</array>
-<key>com.apple.developer.applesignin</key>
-<array>
-    <string>Default</string>
-</array>
-	<key>NSCameraUsageDescription</key>
-<string>BeautySpa By Shea needs camera access to let you take photos for your beauty treatments and track your progress.</string>
 	<key>CFBundleName</key>
 	<string>BeautySpa by Share</string>
 	<key>CFBundlePackageType</key>
@@ -43,27 +31,31 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1091276193854-4hd6hh594gt6p0omrtpokqamhbv9gkrr</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>GIDClientID</key>
+	<string>1091276193854-4hd6hh594gt6p0omrtpokqamhbv9gkrr.apps.googleusercontent.com</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>BeautySpa By Shea needs camera access to let you take photos for your beauty treatments and track your progress.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BeautySpa By Shea needs access to your photo library to let you select and upload photos for your beauty treatments.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>processing</string>
-		<string>remote-notification</string>
-	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.beautyspabyshea.refresh</string>
-		<string>com.beautyspabyshea.processing</string>
-	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -77,5 +69,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>com.apple.developer.applesignin</key>
+	<array>
+		<string>Default</string>
+	</array>
 </dict>
 </plist>

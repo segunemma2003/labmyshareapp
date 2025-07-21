@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/app/services/firebase_auth_service.dart';
 import 'package:flutter_app/app/utils/api_error_handler.dart';
 import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
 import 'package:flutter_app/resources/pages/forgot_password_page.dart';
 import 'package:flutter_app/resources/pages/select_region_page.dart';
 import 'package:flutter_app/resources/pages/sign_up_page.dart';
+import 'package:flutter_app/resources/pages/complete_profile_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class SignInPage extends NyStatefulWidget {
@@ -19,6 +21,8 @@ class _SignInPageState extends NyPage<SignInPage> {
   final _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _isGoogleLoading = false;
+  bool _isAppleLoading = false;
 
   @override
   void dispose() {
@@ -34,10 +38,7 @@ class _SignInPageState extends NyPage<SignInPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -78,14 +79,24 @@ class _SignInPageState extends NyPage<SignInPage> {
               _buildSocialButton(
                 icon: _buildGoogleIcon(),
                 text: "Continue with Google",
-                onPressed: _handleGoogleSignIn,
+                onPressed: _isGoogleLoading
+                    ? () {}
+                    : () {
+                        _handleGoogleSignIn();
+                      },
+                isLoading: _isGoogleLoading,
               ),
               SizedBox(height: 16),
 
               _buildSocialButton(
                 icon: Icon(Icons.apple, size: 24, color: Colors.black),
                 text: "Continue with Apple",
-                onPressed: _handleAppleSignIn,
+                onPressed: _isAppleLoading
+                    ? () {}
+                    : () {
+                        _handleAppleSignIn();
+                      },
+                isLoading: _isAppleLoading,
               ),
               SizedBox(height: 32),
 
@@ -242,6 +253,7 @@ class _SignInPageState extends NyPage<SignInPage> {
     required Widget icon,
     required String text,
     required VoidCallback onPressed,
+    bool isLoading = false,
   }) {
     return SizedBox(
       width: double.infinity,
@@ -259,14 +271,20 @@ class _SignInPageState extends NyPage<SignInPage> {
           children: [
             icon,
             SizedBox(width: 12),
-            Text(
-              text,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(
+                    text,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
           ],
         ),
       ),
@@ -399,78 +417,93 @@ class _SignInPageState extends NyPage<SignInPage> {
   }
 
   Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
     await lockRelease('google_signin', perform: () async {
       try {
-        // TODO: Implement Firebase Google Sign In
-        // 1. Sign in with Google using Firebase Auth
-        // 2. Get the Firebase token
-        // 3. Call AuthService.socialAuth with the token
-
-        // Example implementation:
-        // final googleUser = await GoogleSignIn().signIn();
-        // if (googleUser != null) {
-        //   final googleAuth = await googleUser.authentication;
-        //   final credential = GoogleAuthProvider.credential(
-        //     accessToken: googleAuth.accessToken,
-        //     idToken: googleAuth.idToken,
-        //   );
-        //   final firebaseUser = await FirebaseAuth.instance.signInWithCredential(credential);
-        //   final firebaseToken = await firebaseUser.user?.getIdToken();
-        //
-        //   if (firebaseToken != null) {
-        //     final success = await AuthService.socialAuth(
-        //       firebaseToken: firebaseToken,
-        //       provider: 'google',
-        //     );
-        //   }
-        // }
-
-        showToastNotification(
-          context,
-          style: ToastNotificationStyleType.info,
-          title: "Coming Soon",
-          description: "Google Sign In will be available soon!",
-        );
+        final response = await AuthService.loginWithGoogle();
+        if (response != null && response['token'] != null) {
+          final isNewUser = response['is_new_user'] == true;
+          final user = response['user'] ?? {};
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description: "Signed in with Google successfully!",
+          );
+          if (isNewUser) {
+            routeTo(
+              CompleteProfilePage.path,
+              data: user,
+              navigationType: NavigationType.pushAndRemoveUntil,
+              removeUntilPredicate: (route) => false,
+            );
+          } else {
+            routeTo(
+              SelectRegionPage.path,
+              navigationType: NavigationType.pushAndRemoveUntil,
+              removeUntilPredicate: (route) => false,
+            );
+          }
+        } else {
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Authentication Failed",
+            description:
+                "Failed to authenticate with our servers. Please try again.",
+          );
+        }
       } catch (e) {
+        print('Google Sign-In error: $e');
         ApiErrorHandler.handleError(e, context: context);
+      } finally {
+        setState(() => _isGoogleLoading = false);
       }
     });
   }
 
   Future<void> _handleAppleSignIn() async {
+    setState(() => _isAppleLoading = true);
     await lockRelease('apple_signin', perform: () async {
       try {
-        // TODO: Implement Firebase Apple Sign In
-        // 1. Sign in with Apple using Firebase Auth
-        // 2. Get the Firebase token
-        // 3. Call AuthService.socialAuth with the token
-
-        // Example implementation:
-        // final appleCredential = await SignInWithApple.getAppleIDCredential(
-        //   scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
-        // );
-        // final oauthCredential = OAuthProvider("apple.com").credential(
-        //   idToken: appleCredential.identityToken,
-        //   accessToken: appleCredential.authorizationCode,
-        // );
-        // final firebaseUser = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
-        // final firebaseToken = await firebaseUser.user?.getIdToken();
-        //
-        // if (firebaseToken != null) {
-        //   final success = await AuthService.socialAuth(
-        //     firebaseToken: firebaseToken,
-        //     provider: 'apple',
-        //   );
-        // }
-
-        showToastNotification(
-          context,
-          style: ToastNotificationStyleType.info,
-          title: "Coming Soon",
-          description: "Apple Sign In will be available soon!",
-        );
+        final response = await AuthService.loginWithApple();
+        if (response != null && response['token'] != null) {
+          final isNewUser = response['is_new_user'] == true;
+          final user = response['user'] ?? {};
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.success,
+            title: "Success",
+            description: "Signed in with Apple successfully!",
+          );
+          if (isNewUser) {
+            routeTo(
+              CompleteProfilePage.path,
+              data: user,
+              navigationType: NavigationType.pushAndRemoveUntil,
+              removeUntilPredicate: (route) => false,
+            );
+          } else {
+            routeTo(
+              SelectRegionPage.path,
+              navigationType: NavigationType.pushAndRemoveUntil,
+              removeUntilPredicate: (route) => false,
+            );
+          }
+        } else {
+          showToastNotification(
+            context,
+            style: ToastNotificationStyleType.danger,
+            title: "Authentication Failed",
+            description:
+                "Failed to authenticate with our servers. Please try again.",
+          );
+        }
       } catch (e) {
+        print('Apple Sign-In error: $e');
         ApiErrorHandler.handleError(e, context: context);
+      } finally {
+        setState(() => _isAppleLoading = false);
       }
     });
   }

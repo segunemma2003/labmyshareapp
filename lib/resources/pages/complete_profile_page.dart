@@ -35,14 +35,14 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
   @override
   get init => () async {
         // Preload user data if available
-        final user = await AuthService.getCurrentUser();
-        if (user != null) {
-          _firstNameController.text = user.firstName ?? '';
-          _lastNameController.text = user.lastName ?? '';
-          _phoneController.text = user.phoneNumber ?? '';
-          if (user.gender != null && user.gender!.isNotEmpty) {
-            // Map 'M', 'F', 'O', 'P' to display values
-            switch (user.gender) {
+        final data = widget.data();
+        if (data != null && data is Map<String, dynamic>) {
+          _firstNameController.text = data['first_name'] ?? '';
+          _lastNameController.text = data['last_name'] ?? '';
+          _phoneController.text = data['phone_number'] ?? '';
+          // Gender mapping if available
+          if (data['gender'] != null && data['gender'].toString().isNotEmpty) {
+            switch (data['gender']) {
               case 'M':
                 _selectedGender = 'Male';
                 break;
@@ -55,11 +55,14 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
               case 'P':
                 _selectedGender = 'Prefer not to say';
                 break;
+              default:
+                _selectedGender = data['gender'];
             }
           }
-          if (user.dateOfBirth != null && user.dateOfBirth!.isNotEmpty) {
+          if (data['date_of_birth'] != null &&
+              data['date_of_birth'].toString().isNotEmpty) {
             try {
-              final parts = user.dateOfBirth!.split('-');
+              final parts = data['date_of_birth'].toString().split('-');
               if (parts.length == 3) {
                 _selectedDate = DateTime(
                   int.parse(parts[0]),
@@ -70,6 +73,42 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
             } catch (_) {}
           }
           setState(() {});
+        } else {
+          final user = await AuthService.getCurrentUser();
+          if (user != null) {
+            _firstNameController.text = user.firstName ?? '';
+            _lastNameController.text = user.lastName ?? '';
+            _phoneController.text = user.phoneNumber ?? '';
+            if (user.gender != null && user.gender!.isNotEmpty) {
+              switch (user.gender) {
+                case 'M':
+                  _selectedGender = 'Male';
+                  break;
+                case 'F':
+                  _selectedGender = 'Female';
+                  break;
+                case 'O':
+                  _selectedGender = 'Other';
+                  break;
+                case 'P':
+                  _selectedGender = 'Prefer not to say';
+                  break;
+              }
+            }
+            if (user.dateOfBirth != null && user.dateOfBirth!.isNotEmpty) {
+              try {
+                final parts = user.dateOfBirth!.split('-');
+                if (parts.length == 3) {
+                  _selectedDate = DateTime(
+                    int.parse(parts[0]),
+                    int.parse(parts[1]),
+                    int.parse(parts[2]),
+                  );
+                }
+              } catch (_) {}
+            }
+            setState(() {});
+          }
         }
       };
 
@@ -99,10 +138,7 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
         appBar: AppBar(
           backgroundColor: Color(0xFFFFFFFF),
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: Color(0xFF000000)),
-            onPressed: () => Navigator.pop(context),
-          ),
+          automaticallyImplyLeading: false,
         ),
         body: SafeArea(
           child: Padding(

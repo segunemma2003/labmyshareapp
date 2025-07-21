@@ -6,6 +6,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import '/app/networking/api_service.dart';
 import '/app/models/user.dart';
 import '/config/keys.dart';
+import 'firebase_auth_service.dart';
 
 class AuthService {
   static final AuthApiService _api = AuthApiService();
@@ -408,6 +409,41 @@ class AuthService {
     } catch (e) {
       print('Change password error: $e');
       return false;
+    }
+  }
+
+  /// Sign in with Google using Firebase Auth, then authenticate with backend
+  /// Returns the backend response (token, user, is_new_user) or null on failure.
+  static Future<Map<String, dynamic>?> loginWithGoogle() async {
+    try {
+      final String? firebaseToken =
+          await FirebaseAuthService.signInWithGoogle();
+      if (firebaseToken == null) {
+        print('Google sign-in failed or cancelled');
+        return null;
+      }
+      return await _api.socialAuth(
+          firebaseToken: firebaseToken, provider: 'google');
+    } catch (e) {
+      print('loginWithGoogle error: $e');
+      return null;
+    }
+  }
+
+  /// Sign in with Apple using Firebase Auth, then authenticate with backend
+  /// Returns the backend response (token, user, is_new_user) or null on failure.
+  static Future<Map<String, dynamic>?> loginWithApple() async {
+    try {
+      final String? firebaseToken = await FirebaseAuthService.signInWithApple();
+      if (firebaseToken == null) {
+        print('Apple sign-in failed or cancelled');
+        return null;
+      }
+      return await _api.socialAuth(
+          firebaseToken: firebaseToken, provider: 'apple');
+    } catch (e) {
+      print('loginWithApple error: $e');
+      return null;
     }
   }
 
