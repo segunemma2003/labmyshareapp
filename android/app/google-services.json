@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1091276193854",
+    "project_id": "thebeautyspabyshea-5d513",
+    "storage_bucket": "thebeautyspabyshea-5d513.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1091276193854:android:cf7ae29a71446a6f55916f",
+        "android_client_info": {
+          "package_name": "com.beautyspabyshea.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1091276193854-el80e1tfj750aehbnc8ou9pk0atq7u34.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVQDbKh21B69a4EsjJ6TqcmQ45pVXiJxA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1091276193854-el80e1tfj750aehbnc8ou9pk0atq7u34.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1091276193854-4hd6hh594gt6p0omrtpokqamhbv9gkrr.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.beautyspabyshea.com"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
