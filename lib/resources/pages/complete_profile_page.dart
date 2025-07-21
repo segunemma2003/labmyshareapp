@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter_app/app/services/auth_service.dart';
+import 'package:flutter_app/resources/pages/confirm_selfie_page.dart';
 
 class CompleteProfilePage extends NyStatefulWidget {
   static RouteView path = ("/complete-profile", (_) => CompleteProfilePage());
@@ -13,6 +15,7 @@ class CompleteProfilePage extends NyStatefulWidget {
 class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
 
   String _selectedGender = '';
@@ -30,8 +33,44 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
   ];
 
   @override
-  get init => () {
-        // Initialize any data here
+  get init => () async {
+        // Preload user data if available
+        final user = await AuthService.getCurrentUser();
+        if (user != null) {
+          _firstNameController.text = user.firstName ?? '';
+          _lastNameController.text = user.lastName ?? '';
+          _phoneController.text = user.phoneNumber ?? '';
+          if (user.gender != null && user.gender!.isNotEmpty) {
+            // Map 'M', 'F', 'O', 'P' to display values
+            switch (user.gender) {
+              case 'M':
+                _selectedGender = 'Male';
+                break;
+              case 'F':
+                _selectedGender = 'Female';
+                break;
+              case 'O':
+                _selectedGender = 'Other';
+                break;
+              case 'P':
+                _selectedGender = 'Prefer not to say';
+                break;
+            }
+          }
+          if (user.dateOfBirth != null && user.dateOfBirth!.isNotEmpty) {
+            try {
+              final parts = user.dateOfBirth!.split('-');
+              if (parts.length == 3) {
+                _selectedDate = DateTime(
+                  int.parse(parts[0]),
+                  int.parse(parts[1]),
+                  int.parse(parts[2]),
+                );
+              }
+            } catch (_) {}
+          }
+          setState(() {});
+        }
       };
 
   @override
@@ -170,6 +209,19 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your first name';
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: 20),
+                          // Last Name
+                          _buildLabel("Last name"),
+                          _buildTextField(
+                            controller: _lastNameController,
+                            hintText: "Doe",
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your last name';
                               }
                               return null;
                             },
@@ -527,6 +579,7 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
 
   bool _isValidForm() {
     return _firstNameController.text.isNotEmpty &&
+        _lastNameController.text.isNotEmpty &&
         _phoneController.text.isNotEmpty &&
         _selectedGender.isNotEmpty &&
         _selectedDate != null;
@@ -539,34 +592,75 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
       });
 
       try {
-        // TODO: Implement your profile completion logic here
-        // Example:
-        // await UserProfile.complete(
-        //   firstName: _firstNameController.text,
-        //   phone: _phoneController.text,
-        //   gender: _selectedGender,
-        //   dateOfBirth: _selectedDate!,
-        //   profileImage: _profileImage,
-        // );
+        // 1. Update profile info (without image)
+        final firstName = _firstNameController.text.trim();
+        final lastName = _lastNameController.text.trim();
+        final phone = _phoneController.text.trim();
+        final gender = _selectedGender.isNotEmpty
+            ? _selectedGender[0].toUpperCase()
+            : null; // 'M', 'F', 'O', 'P'
+        final dateOfBirth = _selectedDate != null
+            ? "${_selectedDate!.year.toString().padLeft(4, '0')}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}"
+            : null;
 
-        // Simulate API call
-        await Future.delayed(Duration(seconds: 2));
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Profile completed successfully!',
-              style: TextStyle(color: Color(0xFFFFFFFF)),
-            ),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
+        final success = await AuthService.updateProfile(
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: phone,
+          dateOfBirth: dateOfBirth,
+          gender: gender,
         );
 
-        // Navigate to main app
+        if (!success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to complete profile. Please try again.',
+                style: TextStyle(color: Color(0xFFFFFFFF)),
+              ),
+              backgroundColor: Color(0xFFF44336),
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+
+        // 2. If user picked a profile image, go to ConfirmSelfiePage for confirmation
+        if (_profileImage != null) {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ConfirmSelfiePage(),
+              settings: RouteSettings(arguments: {'image': _profileImage}),
+            ),
+          );
+
+          if (result is Map &&
+              result['confirmed'] == true &&
+              result['image'] != null) {
+            // Upload the confirmed image
+            final uploadSuccess = await AuthService.updateProfileImage(
+                imagePath: result['image'].path);
+            if (!uploadSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Failed to upload profile picture. You can add it later in your profile.',
+                    style: TextStyle(color: Color(0xFFFFFFFF)),
+                  ),
+                  backgroundColor: Color(0xFFF44336),
+                ),
+              );
+            }
+          }
+        }
+
+        // 3. Navigate to select region page
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '/home',
+          '/select-region',
           (route) => false,
         );
       } catch (e) {
