@@ -82,7 +82,7 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
             ),
             body: Tawk(
               directChatLink:
-                  'https://tawk.to/chat/YOUR_TAWK_TO_WIDGET_ID/default',
+                  'https://embed.tawk.to/687e040399e0301918ab8a7d/1j0m3vbjn',
               placeholder: Container(
                 color: Colors.white,
                 child: Center(
