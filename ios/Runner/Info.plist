@@ -18,6 +18,21 @@
 	<array>
 		<string>en</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLName</key>
+        <string>REVERSED_CLIENT_ID</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>YOUR_REVERSED_CLIENT_ID_FROM_GOOGLESERVICE_INFO_PLIST</string>
+        </array>
+    </dict>
+</array>
+<key>com.apple.developer.applesignin</key>
+<array>
+    <string>Default</string>
+</array>
 	<key>NSCameraUsageDescription</key>
 <string>BeautySpa By Shea needs camera access to let you take photos for your beauty treatments and track your progress.</string>
 	<key>CFBundleName</key>
