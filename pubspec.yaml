@@ -36,6 +36,10 @@ dependencies:
   flutter_stripe: ^11.5.0
   flutter_tawk: ^0.1.0
   add_2_calendar: ^3.0.1
+  sign_in_with_apple: ^7.0.1
+  firebase_core: ^3.15.1
+  firebase_auth: ^5.6.2
+  google_sign_in: ^7.1.1
 
   
 

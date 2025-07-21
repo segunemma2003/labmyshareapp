@@ -6,6 +6,7 @@ import 'package:flutter_app/app/utils/api_error_handler.dart';
 import 'package:flutter_app/resources/pages/base_navigation_hub.dart';
 import 'package:flutter_app/resources/pages/sign_in_page.dart';
 import 'package:flutter_app/resources/pages/select_region_page.dart';
+import 'package:flutter_app/resources/pages/complete_profile_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class VerifyEmailPage extends NyStatefulWidget {
@@ -318,20 +319,11 @@ class _VerifyEmailPageState extends NyPage<VerifyEmailPage> {
             description: "Email verified successfully!",
           );
 
-          // Check if user needs to select region
-          final needsRegion = await AuthService.needsRegionSelection();
-
-          if (needsRegion) {
-            // Navigate to region selection
-            routeTo(
-              SelectRegionPage.path,
-              removeUntilPredicate: (route) => false,
-            );
-          } else {
-            // Navigate to main app
-
-            routeTo(BaseNavigationHub.path);
-          }
+          // Always navigate to complete profile page after verification
+          routeTo(
+            CompleteProfilePage.path,
+            removeUntilPredicate: (route) => false,
+          );
         } else {
           // Invalid code
           showToastNotification(

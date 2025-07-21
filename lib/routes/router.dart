@@ -61,7 +61,7 @@ appRouter() => nyRoutes((router) {
       // });
       router.add(NotFoundPage.path).unknownRoute();
       router.add(SignUpPage.path);
-      router.add(SignInPage.path).initialRoute();
+      router.add(SignInPage.path);
       router.add(VerifyEmailPage.path);
       router.add(NewPasswordPage.path);
       router.add(CompleteProfilePage.path);
@@ -83,9 +83,9 @@ appRouter() => nyRoutes((router) {
 
       router.add(FaqsPage.path);
       router.add(LegalPage.path);
-      router.add(WelcomeScreenPage.path);
+      router.add(WelcomeScreenPage.path).initialRoute();
       router.add(ForgotPasswordPage.path);
       router.add(ResetPasswordOTPPage.path);
       router.add(SelectTimePage.path);
-  router.add(BookingDetailsPage.path);
-});
+      router.add(BookingDetailsPage.path);
+    });
