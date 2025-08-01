@@ -23,7 +23,7 @@ class _BaseNavigationHubState extends NavigationHub<BaseNavigationHub> {
   /// Bottom navigation layout with custom styling
   NavigationHubLayout? layout = NavigationHubLayout.bottomNav(
     backgroundColor: Colors.white,
-    selectedItemColor: Color(0xFF985F5F), // Brown color for active state
+    selectedItemColor: Color(0xFFC8AD87), // Brown color for active state
     unselectedItemColor: Color(0xFF9E9E9E), // Grey for inactive
     elevation: 8,
     type: BottomNavigationBarType.fixed,
@@ -58,7 +58,7 @@ class _BaseNavigationHubState extends NavigationHub<BaseNavigationHub> {
                   'home_icon_active.png',
                   width: 24,
                   height: 24,
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                   colorBlendMode: BlendMode.srcIn,
                 ).localAsset(),
               ),
@@ -84,7 +84,7 @@ class _BaseNavigationHubState extends NavigationHub<BaseNavigationHub> {
                   'scissors_active.png',
                   width: 24,
                   height: 24,
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                   colorBlendMode: BlendMode.srcIn,
                 ).localAsset(),
               ),
@@ -110,7 +110,7 @@ class _BaseNavigationHubState extends NavigationHub<BaseNavigationHub> {
                   'calendar_active.png',
                   width: 24,
                   height: 24,
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                   colorBlendMode: BlendMode.srcIn,
                 ).localAsset(),
               ),
@@ -136,7 +136,7 @@ class _BaseNavigationHubState extends NavigationHub<BaseNavigationHub> {
                   'user_active.png',
                   width: 24,
                   height: 24,
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                   colorBlendMode: BlendMode.srcIn,
                 ).localAsset(),
               ),

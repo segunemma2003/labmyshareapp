@@ -9,37 +9,31 @@ description: A new Nylo Flutter application.
 
 publish_to: 'none'
 
-version: 1.0.3+4
+version: 1.0.7+10
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
   flutter: ">=3.24.0 <4.0.0"
 dependencies:
-  url_launcher: ^6.2.6
-  google_fonts: ^6.2.1
-  analyzer: ^6.7.0
-  intl: ^0.20.2
-  nylo_framework: ^6.8.7
-  pretty_dio_logger: ^1.4.0
-  cupertino_icons: ^1.0.8
-  path_provider: ^2.1.4
-  flutter_local_notifications: ^19.1.0
-  font_awesome_flutter: ^10.8.0
-  scaffold_ui: ^1.2.7
   flutter:
     sdk: flutter
-  flutter_localizations:
-    sdk: flutter
+  nylo_framework: ^6.8.7
+  google_fonts: ^6.2.1
   image_picker: ^1.1.2
-  flutter_svg: ^2.2.0
-  table_calendar: ^3.2.0
-  flutter_stripe: ^11.5.0
+  url_launcher: ^6.2.6
   flutter_tawk: ^0.1.0
+  table_calendar: ^3.2.0
+  intl: ^0.20.2
+  flutter_stripe: ^11.5.0
   add_2_calendar: ^3.0.1
-  sign_in_with_apple: ^7.0.1
+  pretty_dio_logger: ^1.4.0
+  country_picker: ^2.0.25
+  flutter_svg: ^2.0.9
   firebase_core: ^3.15.1
   firebase_auth: ^5.6.2
-  google_sign_in: 6.1.5
+  google_sign_in: ^6.1.5
+  sign_in_with_apple: ^7.0.1
+  pin_code_fields: ^8.0.1
 
   
 

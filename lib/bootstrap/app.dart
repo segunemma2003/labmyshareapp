@@ -18,7 +18,7 @@ class Main extends StatelessWidget {
         navigatorKey = NyNavigator.instance.router.navigatorKey,
         initialRoute = nylo.getInitialRoute(),
         navigatorObservers = nylo.getNavigatorObservers(),
-        themeMode = ThemeMode.system;
+        themeMode = ThemeMode.light;
 
   @override
   Widget build(BuildContext context) {

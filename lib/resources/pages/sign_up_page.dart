@@ -365,7 +365,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
 
     await lockRelease('signup', perform: () async {
       try {
-        final success = await AuthService.register(
+        final result = await AuthService.register(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
@@ -373,7 +373,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
           confirmPassword: _confirmPasswordController.text,
         );
 
-        if (success) {
+        if (result['success'] == true) {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
@@ -385,6 +385,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
           // Navigate to verify email page with email data
           routeTo(VerifyEmailPage.path, data: {
             'email': _emailController.text.trim(),
+            'isNewUser': result['isNewUser'] == true,
           });
         } else {
           showToastNotification(

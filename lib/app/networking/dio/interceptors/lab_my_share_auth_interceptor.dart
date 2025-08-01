@@ -6,7 +6,7 @@ class LabMyShareAuthInterceptor extends Interceptor {
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
     try {
-      final tokenData = await Keys.auth.read();
+      final tokenData = await NyStorage.read('token');
       String? token;
 
       if (tokenData != null) {
@@ -14,8 +14,19 @@ class LabMyShareAuthInterceptor extends Interceptor {
         token = tokenData.toString();
       }
 
-      if (token != null && token.isNotEmpty) {
-        options.headers["Authorization"] = "Token $token";
+      // List of endpoints that should NOT have Authorization header
+      final publicEndpoints = [
+        "/auth/verify-email/",
+        "/auth/register/",
+        "/auth/login/",
+        "/auth/resend-otp/"
+      ];
+      final path = options.path;
+      bool isPublic = publicEndpoints.any((endpoint) => path.endsWith(endpoint));
+      if (!isPublic && token != null && token.isNotEmpty) {
+        final authHeader = "Token ${token.trim()}";
+        options.headers["Authorization"] = authHeader;
+        print('[DEBUG] Sending Authorization header: $authHeader');
       }
     } catch (e) {
       print('Error reading auth token: $e');

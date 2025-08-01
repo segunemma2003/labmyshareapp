@@ -7,6 +7,20 @@ import '/config/decoders.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class AuthApiService extends NyApiService {
+  /// Get current user profile (for token validation)
+  Future<Map<String, dynamic>?> getProfile() async {
+    return await network(
+      request: (request) => request.get("/auth/profile/"),
+    );
+  }
+
+  /// Get current user info (for token validation)
+  Future<Map<String, dynamic>?> getMe() async {
+    return await network(
+      request: (request) => request.get("/auth/me/"),
+    );
+  }
+
   AuthApiService({BuildContext? buildContext})
       : super(
           buildContext,

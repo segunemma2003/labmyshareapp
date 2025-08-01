@@ -128,11 +128,21 @@ class ServicesApiService extends NyApiService {
     return null;
   }
 
-  Future<List<AddOn>?> getCategoryAddons({required int categoryId}) async {
+  Future<List<AddOn>?> getCategoryAddons({
+    required int categoryId,
+    int? page,
+    int? pageSize,
+  }) async {
+    Map<String, dynamic> queryParams = {};
+    if (page != null) queryParams['page'] = page;
+    if (pageSize != null) queryParams['page_size'] = pageSize;
+
     final response = await network(
-      request: (request) =>
-          request.get("/services/categories/$categoryId/addons/"),
-      cacheKey: "category_${categoryId}_addons",
+      request: (request) => request.get(
+          "/services/categories/$categoryId/addons/",
+          queryParameters: queryParams),
+      cacheKey:
+          "category_${categoryId}_addons_page_${page ?? 1}_size_${pageSize ?? 10}",
       cacheDuration: const Duration(hours: 2),
     );
 

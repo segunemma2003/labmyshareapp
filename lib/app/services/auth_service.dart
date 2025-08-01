@@ -1,9 +1,8 @@
-import 'dart:convert'; // Ensure this is at the top
+import 'dart:convert';
 import 'package:flutter_app/app/networking/auth_api_service.dart';
 import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
-import '/app/networking/api_service.dart';
 import '/app/models/user.dart';
 import '/config/keys.dart';
 import 'firebase_auth_service.dart';
@@ -13,7 +12,18 @@ class AuthService {
   static final NotificationApiService _notificationApi =
       NotificationApiService();
 
-  static Future<bool> register({
+  /// Flush all NyStorage and cache before authentication
+  static Future<void> flushAllStorageAndCache() async {
+    // Preserve hasOpenedApp flag
+    final hasOpenedApp = await NyStorage.read('hasOpenedApp');
+    await NyStorage.clear(""); // Clear all NyStorage keys
+    if (hasOpenedApp != null) {
+      await NyStorage.save('hasOpenedApp', hasOpenedApp);
+    }
+    await cache().flush(); // Flush Nylo cache
+  }
+
+  static Future<Map<String, dynamic>> register({
     required String firstName,
     required String lastName,
     required String email,
@@ -21,6 +31,8 @@ class AuthService {
     required String confirmPassword,
   }) async {
     try {
+      // Flush all NyStorage and cache before registration
+      await AuthService.flushAllStorageAndCache();
       // Flush old/corrupt token before registration
       await flushAuthToken();
       final response = await _api.register(
@@ -31,19 +43,27 @@ class AuthService {
         confirmPassword: confirmPassword,
       );
 
+      bool success = false;
+      bool isNewUser = false;
       if (response != null && response['token'] != null) {
         // Always save the token as a String
-        await Keys.auth.save(response['token'].toString());
+        final cleanToken = response['token'].toString().trim();
+        await Keys.auth.save(cleanToken);
+        await NyStorage.save('token', cleanToken);
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
           await _saveUserData(userData);
+          await Auth.authenticate(data: userData);
         }
-        return true;
+        success = true;
+        if (response['is_new_user'] != null) {
+          isNewUser = response['is_new_user'] == true;
+        }
       }
-      return false;
+      return {'success': success, 'isNewUser': isNewUser};
     } catch (e) {
       print('Register error: $e');
-      return false;
+      return {'success': false, 'isNewUser': false};
     }
   }
 
@@ -97,6 +117,8 @@ class AuthService {
     required String password,
   }) async {
     try {
+      // Flush all NyStorage and cache before login
+      await AuthService.flushAllStorageAndCache();
       // Flush old/corrupt token before login
       await flushAuthToken();
       final response = await _api.login(
@@ -105,12 +127,15 @@ class AuthService {
       );
 
       if (response != null && response['token'] != null) {
-        // Save the token as a String in Keys.auth
-        await Keys.auth.save(response['token'].toString());
+        // Save the token as a String in Keys.auth and NyStorage
+        final cleanToken = response['token'].toString().trim();
+        await Keys.auth.save(cleanToken);
+        await NyStorage.save('token', cleanToken);
 
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
           await _saveUserData(userData);
+          await Auth.authenticate(data: userData);
         }
         return true;
       }
@@ -121,26 +146,32 @@ class AuthService {
     }
   }
 
-  static Future<bool> socialAuth({
+  static Future<Map<String, dynamic>> socialAuth({
     required String firebaseToken,
     required String provider,
   }) async {
     try {
+      // Flush all NyStorage and cache before social auth
+      await AuthService.flushAllStorageAndCache();
+      // Flush old/corrupt token before social auth
+      await flushAuthToken();
       final response = await _api.socialAuth(
         firebaseToken: firebaseToken,
         provider: provider,
       );
 
+      bool success = false;
+      bool isNewUser = false;
       if (response != null && response['token'] != null) {
-        // Save the token as a String in Keys.auth
-        await Keys.auth.save(response['token'].toString());
+        // Save the token as a String in Keys.auth and NyStorage
+        final cleanToken = response['token'].toString().trim();
+        await Keys.auth.save(cleanToken);
+        await NyStorage.save('token', cleanToken);
 
         if (response['user'] != null) {
           User user = User.fromJson(response['user']);
           await _saveUserData(user.toJson());
-
-          // Check if this is a new user
-          bool isNewUser = response['is_new_user'] ?? false;
+          await Auth.authenticate(data: user.toJson());
 
           // Save current region if available
           if (response['user']['current_region'] != null) {
@@ -148,12 +179,15 @@ class AuthService {
                 .save(response['user']['current_region']['code']);
           }
         }
-        return true;
+        success = true;
+        if (response['is_new_user'] != null) {
+          isNewUser = response['is_new_user'] == true;
+        }
       }
-      return false;
+      return {'success': success, 'isNewUser': isNewUser};
     } catch (e) {
       print('Social auth error: $e');
-      return false;
+      return {'success': false, 'isNewUser': false};
     }
   }
 
@@ -164,19 +198,20 @@ class AuthService {
       print('Logout error: $e');
     } finally {
       // Clear local storage regardless of API response
+      await Auth.logout();
       await Keys.auth.flush();
+      await NyStorage.delete('token');
       await Keys.userProfile.flush();
       await Keys.selectedServices.flush();
       await Keys.selectedProfessional.flush();
       await Keys.bookingDraft.flush();
       await Keys.currentRegion.flush();
       await _notificationApi.clearUserSpecificCache();
-      // await Auth.logout(); // Removed as per edit hint
     }
   }
 
   static Future<bool> isAuthenticated() async {
-    String? token = await Keys.auth.read();
+    String? token = await NyStorage.read('token');
     return token != null && token.isNotEmpty;
   }
 
@@ -217,15 +252,13 @@ class AuthService {
           return null;
         }
 
-        if (userMap != null) {
-          // Handle empty gender field
-          if (userMap['gender'] == '') {
-            userMap['gender'] = null;
-          }
-
-          print('Parsing user data...');
-          return User.fromJson(userMap);
+        // Handle empty gender field
+        if (userMap['gender'] == '') {
+          userMap['gender'] = null;
         }
+
+        print('Parsing user data...');
+        return User.fromJson(userMap);
       }
       return null;
     } catch (e) {

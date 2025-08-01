@@ -19,7 +19,7 @@ class _WelcomeScreenPageState extends NyPage<WelcomeScreenPage> {
   Widget view(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
     final double phoneHeight = screenHeight * 0.60;
-    final double sheetHeight = screenHeight * 0.38;
+    final double sheetHeight = screenHeight * 0.41;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -66,7 +66,7 @@ class _WelcomeScreenPageState extends NyPage<WelcomeScreenPage> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
-                      'The Lab By Shea',
+                      'The Beauty Spa By Shea',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -126,8 +126,8 @@ class _WelcomeScreenPageState extends NyPage<WelcomeScreenPage> {
                             color: Colors.black,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
+                        TextButton(
+                          onPressed: () {
                             routeTo(SignInPage.path);
                           },
                           child: Text(

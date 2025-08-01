@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/resources/pages/confirm_selfie_page.dart';
+import 'package:country_picker/country_picker.dart';
 
 class CompleteProfilePage extends NyStatefulWidget {
   static RouteView path = ("/complete-profile", (_) => CompleteProfilePage());
@@ -22,6 +23,10 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
   DateTime? _selectedDate;
   File? _profileImage;
   bool _isLoading = false;
+
+  // Country code variables
+  String _selectedCountryCode = '+44'; // Default to UK
+  String _selectedCountryFlag = '🇬🇧';
 
   final ImagePicker _picker = ImagePicker();
 
@@ -130,7 +135,6 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
           primary: Color(0xFF000000),
           secondary: Color(0xFF000000),
           surface: Color(0xFFFFFFFF),
-          background: Color(0xFFFFFFFF),
         ),
       ),
       child: Scaffold(
@@ -398,55 +402,105 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
   }
 
   Widget _buildPhoneField() {
-    return Material(
-      color: Colors.transparent,
-      child: TextFormField(
-        controller: _phoneController,
-        keyboardType: TextInputType.phone,
-        style: TextStyle(
-          color: Color(0xFF000000),
-          fontSize: 16,
+    return Row(
+      children: [
+        // Country Code Dropdown
+        GestureDetector(
+          onTap: () {
+            showCountryPicker(
+              context: context,
+              showPhoneCode: true,
+              onSelect: (Country country) {
+                setState(() {
+                  _selectedCountryCode = country.phoneCode;
+                  _selectedCountryFlag = country.flagEmoji;
+                });
+              },
+            );
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              color: Color(0xFFFAFAFA),
+              border: Border.all(color: Color(0xFFE0E0E0)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _selectedCountryFlag,
+                  style: TextStyle(
+                    color: Color(0xFF000000),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  _selectedCountryCode,
+                  style: TextStyle(
+                    color: Color(0xFF000000),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Color(0xFF666666),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
         ),
-        cursorColor: Color(0xFF000000),
-        decoration: InputDecoration(
-          prefixIcon: Container(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              "+1",
+        SizedBox(width: 8),
+        // Phone Number Input
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
               style: TextStyle(
                 color: Color(0xFF000000),
                 fontSize: 16,
               ),
+              cursorColor: Color(0xFF000000),
+              decoration: InputDecoration(
+                hintText: "Enter Phone Number",
+                hintStyle: TextStyle(
+                  color: Color(0xFFBDBDBD),
+                  fontSize: 16,
+                ),
+                filled: true,
+                fillColor: Color(0xFFFAFAFA),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Color(0xFFE0E0E0)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Color(0xFF000000), width: 2),
+                ),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter your phone number';
+                }
+                return null;
+              },
             ),
           ),
-          hintText: "Enter Phone Number",
-          hintStyle: TextStyle(
-            color: Color(0xFFBDBDBD),
-            fontSize: 16,
-          ),
-          filled: true,
-          fillColor: Color(0xFFFAFAFA),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFFE0E0E0)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFFE0E0E0)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFF000000), width: 2),
-          ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your phone number';
-          }
-          return null;
-        },
-      ),
+      ],
     );
   }
 
@@ -560,7 +614,7 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
     );
   }
 
-  Future<void> _pickDate() async {
+  void _pickDate() async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime(2000),
@@ -631,7 +685,8 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
         // 1. Update profile info (without image)
         final firstName = _firstNameController.text.trim();
         final lastName = _lastNameController.text.trim();
-        final phone = _phoneController.text.trim();
+        final phone = _selectedCountryCode +
+            _phoneController.text.trim(); // Combine country code with phone
         final gender = _selectedGender.isNotEmpty
             ? _selectedGender[0].toUpperCase()
             : null; // 'M', 'F', 'O', 'P'

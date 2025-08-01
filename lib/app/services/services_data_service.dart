@@ -82,10 +82,17 @@ class ServicesDataService {
     }
   }
 
-  static Future<List<AddOn>?> getCategoryAddons(
-      {required int categoryId}) async {
+  static Future<List<AddOn>?> getCategoryAddons({
+    required int categoryId,
+    int? page,
+    int? pageSize,
+  }) async {
     try {
-      return await _api.getCategoryAddons(categoryId: categoryId);
+      return await _api.getCategoryAddons(
+        categoryId: categoryId,
+        page: page,
+        pageSize: pageSize,
+      );
     } catch (e) {
       print('Get category addons error: $e');
       return null;

@@ -5,6 +5,7 @@ import 'package:flutter_app/resources/pages/get_help_page.dart';
 import 'package:flutter_app/resources/pages/legal_page.dart';
 import 'package:flutter_app/resources/pages/location_change_page.dart';
 import 'package:flutter_app/resources/pages/profile_detail_page.dart';
+import 'package:flutter_app/resources/pages/progress_report_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_app/app/models/user.dart';
@@ -134,6 +135,11 @@ class _ProfileTabState extends NyState<ProfileTab> {
   void _navigateToLocation() {
     routeTo(LocationChangePage.path);
     // Navigate to location settings
+  }
+
+  void _navigateToProgressReport() {
+    routeTo(ProgressReportPage.path);
+    // Navigate to progress report page
   }
 
   // void _navigateToPaymentDetails() {
@@ -313,7 +319,7 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                 ),
               ),
 
@@ -362,6 +368,11 @@ class _ProfileTabState extends NyState<ProfileTab> {
                 icon: Icons.person_outline,
                 title: "Profile details",
                 onTap: _navigateToProfileDetails,
+              ),
+              _buildProfileOption(
+                icon: Icons.timeline_outlined,
+                title: "Progress Report",
+                onTap: _navigateToProgressReport,
               ),
               _buildProfileOption(
                 icon: Icons.location_on_outlined,

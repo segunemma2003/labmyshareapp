@@ -922,7 +922,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       // Show payment button for pending bookings
       return FloatingActionButton.extended(
         onPressed: _showPaymentSheet,
-        backgroundColor: const Color(0xFF985F5F),
+        backgroundColor: const Color(0xFFC8AD87),
         icon: const Icon(Icons.payment, color: Colors.white),
         label: const Text(
           'Pay Balance',
@@ -933,7 +933,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       // Show review button for completed bookings (not cancelled)
       return FloatingActionButton.extended(
         onPressed: _showReviewSheet,
-        backgroundColor: const Color(0xFF985F5F),
+        backgroundColor: const Color(0xFFC8AD87),
         icon: const Icon(Icons.rate_review, color: Colors.white),
         label: const Text(
           'Write Review',
@@ -962,7 +962,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       // Show calendar button for other statuses
       return FloatingActionButton.extended(
         onPressed: _showCalendarInfo,
-        backgroundColor: const Color(0xFF985F5F),
+        backgroundColor: const Color(0xFFC8AD87),
         icon: const Icon(Icons.calendar_today, color: Colors.white),
         label: const Text(
           'Add to Calendar',
@@ -1141,7 +1141,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
                 width: 8,
                 height: 8,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -1697,7 +1697,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
         children: [
           Icon(
             icon,
-            color: const Color(0xFF985F5F),
+            color: const Color(0xFFC8AD87),
             size: 24,
           ),
           const SizedBox(width: 12),
