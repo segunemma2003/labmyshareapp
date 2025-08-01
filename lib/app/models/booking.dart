@@ -36,6 +36,9 @@ class Booking extends Model {
   String? professionalNotes;
   String? confirmedAt;
   List<dynamic>? selectedAddons;
+  List<dynamic>? beforePictures;
+  List<dynamic>? afterPictures;
+  Map<String, dynamic>? pictureCounts;
 
   Booking() : super(key: key);
 
@@ -73,6 +76,9 @@ class Booking extends Model {
     professionalNotes = data['professional_notes'];
     confirmedAt = data['confirmed_at'];
     selectedAddons = data['selected_addons'];
+    beforePictures = data['before_pictures'];
+    afterPictures = data['after_pictures'];
+    pictureCounts = data['picture_counts'];
   }
 
   static double? _toDouble(dynamic value) {
@@ -119,6 +125,9 @@ class Booking extends Model {
       'professional_notes': professionalNotes,
       'confirmed_at': confirmedAt,
       'selected_addons': selectedAddons,
+      'before_pictures': beforePictures,
+      'after_pictures': afterPictures,
+      'picture_counts': pictureCounts,
     };
   }
 

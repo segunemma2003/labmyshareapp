@@ -50,6 +50,8 @@
 	<string>BeautySpa By Shea needs camera access to let you take photos for your beauty treatments and track your progress.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BeautySpa By Shea needs access to your photo library to let you select and upload photos for your beauty treatments.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>BeautySpa By Shea needs calendar access to add your appointments to your device calendar so you can receive reminders and manage your beauty treatment schedule.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

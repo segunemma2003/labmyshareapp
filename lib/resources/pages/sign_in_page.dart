@@ -88,16 +88,16 @@ class _SignInPageState extends NyPage<SignInPage> {
               ),
               SizedBox(height: 16),
 
-              _buildSocialButton(
-                icon: Icon(Icons.apple, size: 24, color: Colors.black),
-                text: "Continue with Apple",
-                onPressed: _isAppleLoading
-                    ? () {}
-                    : () {
-                        _handleAppleSignIn();
-                      },
-                isLoading: _isAppleLoading,
-              ),
+              // _buildSocialButton(
+              //   icon: Icon(Icons.apple, size: 24, color: Colors.black),
+              //   text: "Continue with Apple",
+              //   onPressed: _isAppleLoading
+              //       ? () {}
+              //       : () {
+              //           _handleAppleSignIn();
+              //         },
+              //   isLoading: _isAppleLoading,
+              // ),
               SizedBox(height: 32),
 
               Row(
@@ -420,10 +420,10 @@ class _SignInPageState extends NyPage<SignInPage> {
     setState(() => _isGoogleLoading = true);
     await lockRelease('google_signin', perform: () async {
       try {
-        final response = await AuthService.loginWithGoogle();
-        if (response != null && response['token'] != null) {
-          final isNewUser = response['is_new_user'] == true;
-          final user = response['user'] ?? {};
+        final result = await AuthService.loginWithGoogle();
+        if (result != null && result['success'] == true) {
+          final isNewUser = result['isNewUser'] == true;
+          final user = result['user'] ?? {};
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
@@ -466,10 +466,10 @@ class _SignInPageState extends NyPage<SignInPage> {
     setState(() => _isAppleLoading = true);
     await lockRelease('apple_signin', perform: () async {
       try {
-        final response = await AuthService.loginWithApple();
-        if (response != null && response['token'] != null) {
-          final isNewUser = response['is_new_user'] == true;
-          final user = response['user'] ?? {};
+        final result = await AuthService.loginWithApple();
+        if (result != null && result['success'] == true) {
+          final isNewUser = result['isNewUser'] == true;
+          final user = result['user'] ?? {};
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,

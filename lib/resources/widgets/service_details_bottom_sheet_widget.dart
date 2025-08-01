@@ -228,9 +228,9 @@ class _ServiceDetailsBottomSheetState extends State<ServiceDetailsBottomSheet> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected ? Color(0xFF985F5F) : Colors.transparent,
+                color: isSelected ? Color(0xFFC8AD87) : Colors.transparent,
                 border: Border.all(
-                  color: Color(0xFF985F5F),
+                  color: Color(0xFFC8AD87),
                 ),
                 borderRadius: BorderRadius.circular(4),
               ),

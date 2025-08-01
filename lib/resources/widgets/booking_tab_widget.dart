@@ -110,7 +110,7 @@ class _BookingTabState extends NyState<BookingTab>
         title: const Text(
           "Appointments",
           style: TextStyle(
-            color: Color(0xFF985F5F),
+            color: Color(0xFFC8AD87),
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -176,7 +176,7 @@ class _BookingTabState extends NyState<BookingTab>
             ElevatedButton(
               onPressed: _loadBookings,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF985F5F),
+                backgroundColor: const Color(0xFFC8AD87),
                 foregroundColor: Colors.white,
               ),
               child: const Text('Retry'),
@@ -254,13 +254,13 @@ class _BookingTabState extends NyState<BookingTab>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: const Color(0xFF985F5F).withOpacity(0.1),
+                color: const Color(0xFFC8AD87).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 iconData,
                 size: 40,
-                color: const Color(0xFF985F5F).withOpacity(0.7),
+                color: const Color(0xFFC8AD87).withOpacity(0.7),
               ),
             ),
             const SizedBox(height: 24),
