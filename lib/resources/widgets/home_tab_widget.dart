@@ -5,6 +5,7 @@ import 'package:flutter_app/app/services/services_data_service.dart';
 import 'package:flutter_app/app/models/service_item.dart' show ServiceCategory;
 import 'package:flutter_app/app/models/region.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomeTab extends NyStatefulWidget {
   HomeTab({super.key});
@@ -21,6 +22,7 @@ class _HomeTabState extends NyState<HomeTab> {
   bool _loadingCategories = true;
   bool _errorRegions = false;
   bool _errorCategories = false;
+  String? _userFirstName;
 
   @override
   get init => () async {
@@ -35,6 +37,12 @@ class _HomeTabState extends NyState<HomeTab> {
     try {
       final user = await AuthService.getCurrentUser();
       final regions = await RegionService.getRegions();
+
+      // Extract user's first name
+      if (user != null) {
+        _userFirstName =
+            user.firstName ?? user.email?.split('@').first ?? 'User';
+      }
 
       if (regions != null && regions.isNotEmpty) {
         setState(() {
@@ -72,13 +80,13 @@ class _HomeTabState extends NyState<HomeTab> {
       _errorCategories = false;
     });
     try {
-      final categories = await ServicesDataService.getServiceCategories();
+      final categories = await ServicesDataService.getFeaturedCategories();
       setState(() {
         _categories = categories;
         _loadingCategories = false;
       });
     } catch (e) {
-      print('Error loading categories: $e');
+      print('Error loading featured categories: $e');
       setState(() {
         _loadingCategories = false;
         _errorCategories = true;
@@ -100,219 +108,314 @@ class _HomeTabState extends NyState<HomeTab> {
   @override
   Widget view(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFFFFF),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        backgroundColor: Color(0xFFFFFFFF),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Region Dropdown
-                  _loadingRegions
-                      ? const SizedBox(
-                          height: 40,
-                          child: Center(child: CircularProgressIndicator()))
-                      : _errorRegions
-                          ? Row(
-                              children: [
-                                Icon(Icons.error, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Failed to load regions'),
-                              ],
-                            )
-                          : Row(
-                              children: [
-                                Icon(Icons.location_city,
-                                    color: Colors.brown, size: 20),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: DropdownButton<Region>(
-                                    isExpanded: true,
-                                    value: _selectedRegion,
-                                    icon: Icon(Icons.keyboard_arrow_down),
-                                    underline: SizedBox(),
-                                    items: _regions.map((region) {
-                                      return DropdownMenuItem<Region>(
-                                        value: region,
-                                        child: Row(
-                                          children: [
-                                            Text(
-                                              region.name ?? '',
-                                              style: TextStyle(fontSize: 16),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (region) =>
-                                        _onRegionChanged(region),
-                                  ),
-                                ),
-                              ],
-                            ),
-                  SizedBox(height: 16),
-                  // Banner Image
+                  // Header Section
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'home_banner.jpg',
-                        width: double.infinity,
-                        height: 160,
-                        fit: BoxFit.cover,
-                      ).localAsset(),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    "Services",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "All Categories",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16),
-            Expanded(
-              child: _loadingCategories
-                  ? Center(child: CircularProgressIndicator())
-                  : _errorCategories
-                      ? Center(child: Text('Failed to load categories'))
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: GridView.builder(
-                            itemCount: _categories.length,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.1,
-                            ),
-                            itemBuilder: (context, index) {
-                              final category = _categories[index];
-                              return _buildCategoryCard(category);
-                            },
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Greeting
+                        Text(
+                          "Hello ${_userFirstName ?? 'User'}",
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFC8AD87), // Light brown color
                           ),
                         ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+                        SizedBox(height: 8),
 
-  Widget _buildCategoryCard(ServiceCategory category) {
-    final String title = category.name;
-    final String? iconUrl = category.icon;
-    return GestureDetector(
-      onTap: _loadingCategories
-          ? null
-          : () {
-              if (_categories.isEmpty) {
-                print('Navigation blocked: _categories is empty');
-                return;
-              }
-
-              try {
-                print(
-                    'Navigating to /select-services with category: ${category.name}');
-                routeTo('/select-services', data: {
-                  'categories': _categories,
-                  'initialCategory': category,
-                });
-              } catch (e) {
-                print('Navigation error: $e');
-                // Optionally show a snackbar or dialog to the user
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Unable to navigate. Please try again.')),
-                );
-              }
-            },
-      child: Opacity(
-        opacity: _loadingCategories ? 0.5 : 1.0,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Stack(
-              children: [
-                if (iconUrl != null && iconUrl.isNotEmpty)
-                  Image.network(
-                    iconUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child:
-                          Center(child: Icon(Icons.image, color: Colors.grey)),
-                    ),
-                  )
-                else
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Colors.grey[200],
-                    child: Center(child: Icon(Icons.image, color: Colors.grey)),
-                  ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        // Location with building icon
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_city,
+                              color: Colors.black,
+                              size: 16,
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: _loadingRegions
+                                  ? Text(
+                                      'Loading...',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    )
+                                  : _errorRegions
+                                      ? Text(
+                                          'Failed to load regions',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.red,
+                                          ),
+                                        )
+                                      : DropdownButton<Region>(
+                                          isExpanded: true,
+                                          value: _selectedRegion,
+                                          icon: Icon(Icons.keyboard_arrow_down,
+                                              size: 16),
+                                          underline: SizedBox(),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black,
+                                          ),
+                                          items: _regions.map((region) {
+                                            return DropdownMenuItem<Region>(
+                                              value: region,
+                                              child: Text(
+                                                region.name ?? '',
+                                                style: TextStyle(fontSize: 14),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (region) =>
+                                              _onRegionChanged(region),
+                                        ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  right: 12,
-                  child: Text(
-                    title,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+
+                  SizedBox(height: 24),
+
+                  // Main Promotional Banner
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      height: 250,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Stack(
+                          children: [
+                            // Background Image
+                            Image.asset(
+                              'home_tab_cover.png',
+                              width: double.infinity,
+                              height: double.infinity,
+                              fit: BoxFit.cover,
+                            ).localAsset(),
+                            // Text Overlay
+                            Positioned(
+                              bottom: 20,
+                              left: 20,
+                              right: 20,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFFFFF), // #FFFFFF
+                                        Color(0xFFF3D4A9), // #F3D4A9
+                                      ],
+                                    ).createShader(bounds),
+                                    child: Text(
+                                      'Welcome To The',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFFFFF), // #FFFFFF
+                                        Color(0xFFF3D4A9), // #F3D4A9
+                                      ],
+                                    ).createShader(bounds),
+                                    child: Text(
+                                      'Beauty Spa By Shea',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  SizedBox(height: 32),
+
+                  // Recent Categories Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Featured Categories",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            // Navigate to all services
+                            routeTo('/select-services', data: {
+                              'categories': _categories,
+                            });
+                          },
+                          child: Text(
+                            "All Services",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFFC8AD87),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Featured Categories - 1 on top (full width), 2 below (side by side)
+                  if (!_loadingCategories &&
+                      !_errorCategories &&
+                      _categories.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          // First row - 1 category full width
+                          _buildFeaturedCategoryCard(_categories[0]),
+                          SizedBox(height: 16),
+                          // Second row - 2 categories side by side
+                          if (_categories.length > 1)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildFeaturedCategoryCard(
+                                      _categories[1]),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _categories.length > 2
+                                      ? _buildFeaturedCategoryCard(
+                                          _categories[2])
+                                      : SizedBox(),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+
+                  SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ));
+  }
+
+  Widget _buildFeaturedCategoryCard(ServiceCategory category) {
+    final String title = category.name;
+    final String? iconUrl = category.icon;
+
+    return GestureDetector(
+      onTap: () {
+        routeTo('/select-services', data: {
+          'categories': _categories,
+          'initialCategory': category,
+        });
+      },
+      child: Container(
+        height: 200,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              if (iconUrl != null && iconUrl.isNotEmpty)
+                Image.network(
+                  iconUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey[200],
+                    child: Center(child: Icon(Icons.image, color: Colors.grey)),
+                  ),
+                )
+              else
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.grey[200],
+                  child: Center(child: Icon(Icons.image, color: Colors.grey)),
+                ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -89,6 +89,44 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
     );
   }
 
+  void _showFullNote() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Appointment Note',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              _booking!.professionalNotes!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Color(0xFFC8AD87),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget view(BuildContext context) {
     return Scaffold(
@@ -170,6 +208,12 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
   }
 
   Widget _buildBookingDetail() {
+    // Debug information
+    print('Booking Details Debug:');
+    print('Before Pictures: ${_booking!.beforePictures}');
+    print('After Pictures: ${_booking!.afterPictures}');
+    print('Professional Notes: ${_booking!.professionalNotes}');
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -188,8 +232,8 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
           const SizedBox(height: 24),
 
           // Appointment Note Section
-          if (_booking!.customerNotes != null &&
-              _booking!.customerNotes!.isNotEmpty)
+          if (_booking!.professionalNotes != null &&
+              _booking!.professionalNotes!.isNotEmpty)
             _buildAppointmentNote(),
 
           const SizedBox(height: 24),
@@ -198,10 +242,12 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
           if (_booking!.beforePictures != null &&
               _booking!.beforePictures!.isNotEmpty)
             _buildPictureSection(
-              'Before Pictures',
+              'Appointment Picture - Before',
               _booking!.beforePictures!,
               'before',
-            ),
+            )
+          else if (_booking!.beforePictures != null)
+            _buildEmptyPictureSection('Appointment Picture - Before'),
 
           const SizedBox(height: 24),
 
@@ -209,10 +255,12 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
           if (_booking!.afterPictures != null &&
               _booking!.afterPictures!.isNotEmpty)
             _buildPictureSection(
-              'After Pictures',
+              'Appointment Picture - After',
               _booking!.afterPictures!,
               'after',
-            ),
+            )
+          else if (_booking!.afterPictures != null)
+            _buildEmptyPictureSection('Appointment Picture - After'),
 
           // Show message if no pictures available
           if ((_booking!.beforePictures == null ||
@@ -238,17 +286,34 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Appointment Note',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
+          Row(
+            children: [
+              const Text(
+                'Appointment Note',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                onPressed: () => _showFullNote(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
-            _booking!.customerNotes!,
+            _booking!.professionalNotes!.length > 50
+                ? '${_booking!.professionalNotes!.substring(0, 50)}...'
+                : _booking!.professionalNotes!,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade700,
@@ -332,6 +397,58 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
     );
   }
 
+  Widget _buildEmptyPictureSection(String title) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.photo_library_outlined,
+                size: 48,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No pictures available',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Pictures will appear here once uploaded by your professional',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildPictureItem(
       dynamic picture, List<dynamic> pictures, String type, int index) {
     String imageUrl = '';
@@ -341,6 +458,12 @@ class _BookingDetailPageState extends NyPage<BookingDetailPage> {
       imageUrl = picture['image_url'] ?? '';
       caption = picture['caption'] ?? '';
     }
+
+    // Debug information
+    print('Building picture item for $type:');
+    print('Picture data: $picture');
+    print('Image URL: $imageUrl');
+    print('Caption: $caption');
 
     if (imageUrl.isEmpty) {
       return Container(

@@ -30,10 +30,14 @@ class ServicesApiService extends NyApiService {
         RegionInterceptor: RegionInterceptor(),
       };
 
-  Future<List<dynamic>?> getServiceCategories() async {
+  Future<List<dynamic>?> getServiceCategories({bool? isFeatured}) async {
+    Map<String, dynamic> queryParams = {};
+    if (isFeatured != null) queryParams['is_featured'] = isFeatured;
+
     final response = await network(
-      request: (request) => request.get("/services/categories/"),
-      cacheKey: "service_categories",
+      request: (request) =>
+          request.get("/services/categories/", queryParameters: queryParams),
+      cacheKey: "service_categories${isFeatured != null ? '_featured' : ''}",
       cacheDuration: const Duration(hours: 6),
     );
 
@@ -87,6 +91,27 @@ class ServicesApiService extends NyApiService {
       cacheKey: "featured_services",
       cacheDuration: const Duration(minutes: 30),
     );
+  }
+
+  Future<List<dynamic>?> getFeaturedCategories() async {
+    final response = await network(
+      request: (request) => request.get("/services/categories/featured/"),
+      cacheKey: "featured_categories",
+      cacheDuration: const Duration(hours: 1),
+    );
+
+    // Handle Django REST framework response structure
+    if (response is Map<String, dynamic> && response.containsKey('results')) {
+      return response['results'] as List<dynamic>?;
+    }
+
+    // If it's already a list, return as is
+    if (response is List) {
+      return response;
+    }
+
+    // Fallback
+    return null;
   }
 
   Future<List<Service>?> searchServices({
