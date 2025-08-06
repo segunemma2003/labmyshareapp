@@ -7,9 +7,10 @@ import '/app/models/service_item.dart' show ServiceCategory, AddOn;
 class ServicesDataService {
   static final ServicesApiService _api = ServicesApiService();
 
-  static Future<List<ServiceCategory>> getServiceCategories() async {
+  static Future<List<ServiceCategory>> getServiceCategories(
+      {bool? isFeatured}) async {
     try {
-      final response = await _api.getServiceCategories();
+      final response = await _api.getServiceCategories(isFeatured: isFeatured);
       if (response != null) {
         return response
             .map((item) =>
@@ -19,6 +20,22 @@ class ServicesDataService {
       return [];
     } catch (e) {
       print('Get service categories error: $e');
+      return [];
+    }
+  }
+
+  static Future<List<ServiceCategory>> getFeaturedCategories() async {
+    try {
+      final response = await _api.getFeaturedCategories();
+      if (response != null) {
+        return response
+            .map((item) =>
+                ServiceCategory.fromJson(item as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      print('Get featured categories error: $e');
       return [];
     }
   }

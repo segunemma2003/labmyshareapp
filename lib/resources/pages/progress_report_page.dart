@@ -60,10 +60,6 @@ class _ProgressReportPageState extends NyPage<ProgressReportPage> {
     }
   }
 
-  void _navigateToBookingDetail(Booking booking) {
-    routeTo("/booking-detail", data: {'bookingId': booking.bookingId});
-  }
-
   String _formatDate(String? dateString) {
     if (dateString == null) return 'Date not available';
 
@@ -77,16 +73,13 @@ class _ProgressReportPageState extends NyPage<ProgressReportPage> {
 
   String _getBookingReference(String? bookingId) {
     if (bookingId == null) return 'N/A';
-    // Extract a short reference from the booking ID
     return bookingId.length > 8
         ? bookingId.substring(0, 8).toUpperCase()
         : bookingId.toUpperCase();
   }
 
-  bool _hasPictures(Booking booking) {
-    final beforeCount = booking.beforePictures?.length ?? 0;
-    final afterCount = booking.afterPictures?.length ?? 0;
-    return beforeCount > 0 || afterCount > 0;
+  void _navigateToBookingDetails(Booking booking) {
+    routeTo("/progress-report-details", data: {'bookingId': booking.bookingId});
   }
 
   @override
@@ -206,142 +199,50 @@ class _ProgressReportPageState extends NyPage<ProgressReportPage> {
 
   Widget _buildBookingItem(Booking booking) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _navigateToBookingDetail(booking),
-          borderRadius: BorderRadius.circular(12),
+          onTap: () => _navigateToBookingDetails(booking),
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                // Date
-                Text(
-                  _formatDate(booking.scheduledDate),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Service details and booking reference
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date
+                      Text(
+                        _formatDate(booking.scheduledDate),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Service details and booking reference
+                      Text(
                         '${booking.serviceName ?? 'Service'} | Booking Ref: ${_getBookingReference(booking.bookingId)}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade600,
                         ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        // Show picture indicator if booking has pictures
-                        if (_hasPictures(booking))
-                          Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFC8AD87)
-                                  .withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.photo_library,
-                                  size: 12,
-                                  color: const Color(0xFFC8AD87),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Photos',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFFC8AD87),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey.shade400,
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-
-                const SizedBox(height: 12),
-
-                // Status indicator
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: BookingService.getStatusColor(
-                                booking.status ?? 'pending')
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        BookingService.getStatusDisplayText(
-                            booking.status ?? 'pending'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: BookingService.getStatusColor(
-                              booking.status ?? 'pending'),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: BookingService.getPaymentStatusColor(
-                                booking.paymentStatus ?? 'pending')
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        BookingService.getPaymentStatusDisplayText(
-                            booking.paymentStatus ?? 'pending'),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: BookingService.getPaymentStatusColor(
-                              booking.paymentStatus ?? 'pending'),
-                        ),
-                      ),
-                    ),
-                  ],
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey.shade400,
                 ),
               ],
             ),

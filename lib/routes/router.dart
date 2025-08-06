@@ -11,6 +11,7 @@ import '/resources/pages/payment_detail_page.dart';
 import '/resources/pages/location_change_page.dart';
 import '/resources/pages/profile_detail_page.dart';
 import '/resources/pages/progress_report_page.dart';
+import '/resources/pages/progress_report_details_page.dart';
 import '/resources/pages/booking_detail_page.dart';
 import '/resources/pages/close_appointment_detail_page.dart';
 import '/resources/pages/pending_appointment_detail_page.dart';
@@ -83,6 +84,7 @@ appRouter() => nyRoutes((router) {
       router.add(GetHelpPage.path);
       router.add(ChatPage.path);
       router.add(ProgressReportPage.path);
+      router.add(ProgressReportDetailsPage.path);
       router.add(BookingDetailPage.path);
 
       router.add(FaqsPage.path);
