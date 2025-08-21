@@ -22,7 +22,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
 
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  // Remove manual loading state - using Nylo's built-in loading
+  bool _isLoading = false; // Add loading state
   int? _selectedRegionId;
 
   @override
@@ -50,7 +50,10 @@ class _SignUpPageState extends NyPage<SignUpPage> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isLoading
+              ? null
+              : () =>
+                  Navigator.pop(context), // Disable back button when loading
         ),
       ),
       body: SafeArea(
@@ -92,6 +95,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                         _buildTextField(
                           controller: _firstNameController,
                           hintText: "e.g John",
+                          enabled: !_isLoading, // Disable when loading
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your first name';
@@ -109,6 +113,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                         _buildTextField(
                           controller: _lastNameController,
                           hintText: "e.g Doe",
+                          enabled: !_isLoading, // Disable when loading
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your last name';
@@ -127,6 +132,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                           controller: _emailController,
                           hintText: "example@email.com",
                           keyboardType: TextInputType.emailAddress,
+                          enabled: !_isLoading, // Disable when loading
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
@@ -146,6 +152,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                           controller: _passwordController,
                           hintText: "Enter password",
                           obscureText: !_isPasswordVisible,
+                          enabled: !_isLoading, // Disable when loading
                           suffixIcon: IconButton(
                             icon: Icon(
                               _isPasswordVisible
@@ -153,11 +160,13 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                                   : Icons.visibility_off,
                               color: Colors.grey,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _isPasswordVisible = !_isPasswordVisible;
-                              });
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _isPasswordVisible = !_isPasswordVisible;
+                                    });
+                                  },
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -182,6 +191,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                           controller: _confirmPasswordController,
                           hintText: "Re-enter password",
                           obscureText: !_isConfirmPasswordVisible,
+                          enabled: !_isLoading, // Disable when loading
                           suffixIcon: IconButton(
                             icon: Icon(
                               _isConfirmPasswordVisible
@@ -189,12 +199,14 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                                   : Icons.visibility_off,
                               color: Colors.grey,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _isConfirmPasswordVisible =
-                                    !_isConfirmPasswordVisible;
-                              });
-                            },
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _isConfirmPasswordVisible =
+                                          !_isConfirmPasswordVisible;
+                                    });
+                                  },
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -217,22 +229,49 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
-                    onPressed: _handleSignUp,
+                    onPressed: _isLoading
+                        ? null
+                        : _handleSignUp, // Disable when loading
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor:
+                          _isLoading ? Colors.grey[400] : Colors.black,
                       disabledBackgroundColor: Colors.grey[400],
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text(
+                                "Creating Account...",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            "Sign Up",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -291,15 +330,18 @@ class _SignUpPageState extends NyPage<SignUpPage> {
                         TextSpan(text: "Already have an account? "),
                         WidgetSpan(
                           child: GestureDetector(
-                            onTap: () {
-                              // Navigate to sign in page
-                              routeTo(SignInPage.path);
-                            },
+                            onTap: _isLoading
+                                ? null
+                                : () {
+                                    // Navigate to sign in page
+                                    routeTo(SignInPage.path);
+                                  },
                             child: Text(
                               "Sign In",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: Colors.blue,
+                                color:
+                                    _isLoading ? Colors.grey[400] : Colors.blue,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -335,6 +377,7 @@ class _SignUpPageState extends NyPage<SignUpPage> {
     required TextEditingController controller,
     required String hintText,
     bool obscureText = false,
+    bool enabled = true, // Add enabled parameter
     Widget? suffixIcon,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
@@ -342,17 +385,18 @@ class _SignUpPageState extends NyPage<SignUpPage> {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      enabled: enabled, // Use enabled parameter
       keyboardType: keyboardType,
       validator: validator,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(
-          color: Colors.grey[400],
+          color: enabled ? Colors.grey[400] : Colors.grey[300],
           fontSize: 16,
         ),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: enabled ? Colors.grey[50] : Colors.grey[100],
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey[300]!),
@@ -360,6 +404,10 @@ class _SignUpPageState extends NyPage<SignUpPage> {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[200]!),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -383,63 +431,71 @@ class _SignUpPageState extends NyPage<SignUpPage> {
       return;
     }
 
-    // Use Nylo's built-in loading system
-    await lockRelease('signup', perform: () async {
-      try {
-        // Validate region selection
-        if (_selectedRegionId == null) {
-          throw Exception('Please select a region');
-        }
+    // Set loading state
+    setState(() {
+      _isLoading = true;
+    });
 
-        // Call the registration API
-        final success = await AuthService.register(
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          confirmPassword: _confirmPasswordController.text,
-          currentRegion: _selectedRegionId!,
+    try {
+      // Validate region selection
+      if (_selectedRegionId == null) {
+        throw Exception('Please select a region');
+      }
+
+      // Call the registration API
+      final success = await AuthService.register(
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
+        currentRegion: _selectedRegionId!,
+      );
+
+      if (success) {
+        // Show success message
+        showToastNotification(
+          context,
+          style: ToastNotificationStyleType.success,
+          title: "Success",
+          description:
+              "Account created successfully! Please verify your email.",
         );
 
-        if (success) {
-          // Show success message
-          showToastNotification(
-            context,
-            style: ToastNotificationStyleType.success,
-            title: "Success",
-            description:
-                "Account created successfully! Please verify your email.",
-          );
-
-          // Navigate to verify email page with email data
-          routeTo(VerifyEmailPage.path, data: {
-            'email': _emailController.text.trim(),
-          });
-        } else {
-          // Handle registration failure
-          showToastNotification(
-            context,
-            style: ToastNotificationStyleType.danger,
-            title: "Registration Failed",
-            description: "Failed to create account. Please try again.",
-          );
-        }
-      } catch (e) {
-        // Handle specific errors using your ApiErrorHandler
-        print('Registration error: $e');
-
-        // Show a generic error message
+        // Navigate to verify email page with email data
+        routeTo(VerifyEmailPage.path, data: {
+          'email': _emailController.text.trim(),
+        });
+      } else {
+        // Handle registration failure
         showToastNotification(
           context,
           style: ToastNotificationStyleType.danger,
-          title: "Error",
-          description:
-              "An error occurred during registration. Please try again.",
+          title: "Registration Failed",
+          description: "Failed to create account. Please try again.",
         );
-
-        // You can also use ApiErrorHandler if you prefer:
-        // ApiErrorHandler.handleError(e, context: context);
       }
-    });
+    } catch (e) {
+      // Handle specific errors using your ApiErrorHandler
+      print('Registration error: $e');
+
+      // Show a generic error message
+      showToastNotification(
+        context,
+        style: ToastNotificationStyleType.danger,
+        title: "Error",
+        description: "An error occurred during registration. Please try again.",
+      );
+
+      // You can also use ApiErrorHandler if you prefer:
+      // ApiErrorHandler.handleError(e, context: context);
+    } finally {
+      // Reset loading state
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }

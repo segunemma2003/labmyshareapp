@@ -15,6 +15,7 @@ class _SignInPageState extends NyPage<SignInPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FocusNode _signInButtonFocusNode = FocusNode();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -22,6 +23,9 @@ class _SignInPageState extends NyPage<SignInPage> {
   @override
   get init => () {
         // Initialize any data here
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          FocusScope.of(context).requestFocus(_signInButtonFocusNode);
+        });
       };
 
   @override
@@ -194,6 +198,7 @@ class _SignInPageState extends NyPage<SignInPage> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
+                  focusNode: _signInButtonFocusNode,
                   onPressed: _isLoading ? null : _handleSignIn,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
