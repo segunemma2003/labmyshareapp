@@ -29,8 +29,15 @@ class ApiErrorHandler {
           break;
         case 401:
           message = 'Authentication failed. Please login again.';
-          // Auto logout on 401
-          Auth.logout();
+          // Only auto logout if this is not a login attempt (check via request path)
+          // This prevents logout during failed login attempts
+          if (error.requestOptions.path.contains('/login/')) {
+            // This is a login attempt failure, show error but don't logout
+            message = 'Invalid email or password. Please try again.';
+          } else {
+            // Auto logout on 401 for authenticated requests
+            Auth.logout();
+          }
           break;
         case 403:
           message = 'You don\'t have permission to perform this action.';

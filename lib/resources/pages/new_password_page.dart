@@ -125,6 +125,10 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
                                   RegExp(r'^(?=.*[A-Za-z])(?=.*\d)')
                                       .hasMatch(_passwordController.text),
                                 ),
+                                _buildRequirement(
+                                  "Must be different from previous passwords",
+                                  true, // This will always show as a reminder
+                                ),
                               ],
                             ),
                           ),
@@ -384,9 +388,9 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
-            title: "Success",
+            title: "Password Reset Successful",
             description:
-                "Password updated successfully! Please sign in with your new password.",
+                "Your password has been updated successfully! All existing sessions have been invalidated for security. Please sign in with your new password.",
           );
 
           // Navigate to sign in page
@@ -398,8 +402,8 @@ class _NewPasswordPageState extends NyPage<NewPasswordPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.danger,
-            title: "Error",
-            description: "Failed to update password. Please try again.",
+            title: "Password Reset Failed",
+            description: "Failed to update password. Please try again or request a new verification code.",
           );
         }
       } catch (e) {
