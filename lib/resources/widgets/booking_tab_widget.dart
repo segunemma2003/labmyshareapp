@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/resources/pages/booking_details_page.dart';
+import 'package:flutter_app/resources/pages/select_services_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '../../app/services/booking_service.dart';
 import '../../app/models/booking.dart';
@@ -287,7 +288,7 @@ class _BookingTabState extends NyState<BookingTab>
             OutlinedButton(
               onPressed: () {
                 // Navigate to booking flow
-                Navigator.pushNamed(context, "/select-professional");
+                routeTo(SelectServicesPage.path);
               },
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Colors.black),

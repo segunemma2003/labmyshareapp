@@ -17,6 +17,15 @@ class _ForgotPasswordPageState extends NyPage<ForgotPasswordPage> {
   final _emailController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Listen to text changes to trigger rebuild when email input changes
+    _emailController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
@@ -108,22 +117,36 @@ class _ForgotPasswordPageState extends NyPage<ForgotPasswordPage> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Color(0xFFE0E0E0)),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  Icons.security,
-                                  size: 20,
-                                  color: Color(0xFF2196F3),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    "For security reasons, we'll send a verification code to your email.",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFF424242),
-                                      height: 1.4,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.security,
+                                      size: 20,
+                                      color: Color(0xFF2196F3),
                                     ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        "Security Information",
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF424242),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  "• 6-digit verification code will be sent to your email\n• Code expires in 10 minutes\n• Rate limited to prevent abuse (2-minute cooldown)\n• All existing sessions will be invalidated after password reset",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF424242),
+                                    height: 1.4,
                                   ),
                                 ),
                               ],
@@ -298,9 +321,9 @@ class _ForgotPasswordPageState extends NyPage<ForgotPasswordPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
-            title: "Code Sent",
+            title: "OTP Sent",
             description:
-                "If an account exists with this email, a verification code has been sent.",
+                "A 6-digit verification code has been sent to your email. The code will expire in 10 minutes.",
           );
 
           // Navigate to OTP verification page
@@ -312,7 +335,7 @@ class _ForgotPasswordPageState extends NyPage<ForgotPasswordPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
-            title: "Code Sent",
+            title: "OTP Sent",
             description:
                 "If an account exists with this email, a verification code has been sent.",
           );

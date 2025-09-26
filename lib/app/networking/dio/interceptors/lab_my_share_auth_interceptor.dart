@@ -1,4 +1,3 @@
-import 'package:flutter_app/config/keys.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 class LabMyShareAuthInterceptor extends Interceptor {
@@ -22,7 +21,8 @@ class LabMyShareAuthInterceptor extends Interceptor {
         "/auth/resend-otp/"
       ];
       final path = options.path;
-      bool isPublic = publicEndpoints.any((endpoint) => path.endsWith(endpoint));
+      bool isPublic =
+          publicEndpoints.any((endpoint) => path.endsWith(endpoint));
       if (!isPublic && token != null && token.isNotEmpty) {
         final authHeader = "Token ${token.trim()}";
         options.headers["Authorization"] = authHeader;
@@ -43,10 +43,30 @@ class LabMyShareAuthInterceptor extends Interceptor {
   @override //
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401) {
-      // Token expired or invalid, logout user
-      Auth.logout();
-      // Navigate to login page
-      routeToInitial();
+      // List of endpoints that should not trigger logout/redirect
+      // (these are login/registration endpoints where 401 is expected for invalid credentials)
+      final publicEndpoints = [
+        "/auth/verify-email/",
+        "/auth/register/",
+        "/auth/login/",
+        "/auth/resend-otp/",
+        "/auth/forgot-password/",
+        "/auth/verify-reset-otp/",
+        "/auth/reset-password/",
+        "/auth/social-auth/"
+      ];
+
+      final path = err.requestOptions.path;
+      bool isPublicEndpoint =
+          publicEndpoints.any((endpoint) => path.endsWith(endpoint));
+
+      // Only logout and redirect for authenticated requests, not for login attempts
+      if (!isPublicEndpoint) {
+        // Token expired or invalid for authenticated request, logout user
+        Auth.logout();
+        // Navigate to login page
+        routeToInitial();
+      }
     }
     handler.next(err);
   }

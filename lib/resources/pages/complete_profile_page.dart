@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/resources/pages/select_region_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -749,10 +750,10 @@ class _CompleteProfilePageState extends NyPage<CompleteProfilePage> {
         }
 
         // 3. Navigate to select region page
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/select-region',
-          (route) => false,
+        routeTo(
+          SelectRegionPage.path,
+          navigationType: NavigationType.pushAndRemoveUntil,
+          removeUntilPredicate: (route) => false,
         );
       } catch (e) {
         // Handle error

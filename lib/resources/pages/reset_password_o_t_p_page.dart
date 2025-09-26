@@ -154,7 +154,37 @@ class _ResetPasswordOTPPageState extends NyPage<ResetPasswordOTPPage> {
                     ],
                   ),
                 ),
-                SizedBox(height: 48),
+                SizedBox(height: 32),
+
+                // Instructions
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Color(0xFFE9ECEF)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Color(0xFF6C757D),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Enter the 6-digit code sent to your email. The code will auto-advance as you type.",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6C757D),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
 
                 // OTP Input Fields (6 digits)
                 Row(
@@ -330,8 +360,8 @@ class _ResetPasswordOTPPageState extends NyPage<ResetPasswordOTPPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
-            title: "Success",
-            description: "Code verified successfully!",
+            title: "Code Verified",
+            description: "OTP verified successfully. You can now reset your password.",
           );
 
           // Navigate to new password page with email and OTP
@@ -344,8 +374,8 @@ class _ResetPasswordOTPPageState extends NyPage<ResetPasswordOTPPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.danger,
-            title: "Invalid Code",
-            description: "The verification code is invalid or has expired.",
+            title: "Invalid OTP",
+            description: "The verification code is invalid or has expired. Please try again.",
           );
           _clearFields();
         }
@@ -371,8 +401,8 @@ class _ResetPasswordOTPPageState extends NyPage<ResetPasswordOTPPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.success,
-            title: "Code Sent",
-            description: "A new verification code has been sent to your email.",
+            title: "New Code Sent",
+            description: "A new 6-digit verification code has been sent to your email. The code will expire in 10 minutes.",
           );
 
           // Restart timer
@@ -384,8 +414,8 @@ class _ResetPasswordOTPPageState extends NyPage<ResetPasswordOTPPage> {
           showToastNotification(
             context,
             style: ToastNotificationStyleType.danger,
-            title: "Error",
-            description: "Failed to resend code. Please try again later.",
+            title: "Resend Failed",
+            description: "Failed to resend code. Please wait 2 minutes before trying again.",
           );
         }
       } catch (e) {
