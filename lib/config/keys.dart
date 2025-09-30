@@ -17,6 +17,9 @@ class Keys {
           bearerToken,
           currentRegion,
           userProfile,
+          isLoggedIn.defaultValue(false),
+          loginTimestamp,
+          hasOpenedApp.defaultValue(false),
           // coins.defaultValue(10), // give the user 10 coins by default
         ];
       };
@@ -30,6 +33,9 @@ class Keys {
   static StorageKey bookingDraft = 'SK_BOOKING_DRAFT';
   static StorageKey paymentMethods = 'SK_PAYMENT_METHODS';
   static StorageKey notificationPreferences = 'SK_NOTIFICATION_PREFERENCES';
+  static StorageKey isLoggedIn = 'SK_IS_LOGGED_IN';
+  static StorageKey loginTimestamp = 'SK_LOGIN_TIMESTAMP';
+  static StorageKey hasOpenedApp = 'SK_HAS_OPENED_APP';
   // static StorageKey coins = 'SK_COINS';
 
   /// Add your storage keys here...

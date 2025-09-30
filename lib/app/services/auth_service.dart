@@ -5,7 +5,6 @@ import 'package:flutter_app/app/networking/services_api_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/models/user.dart';
 import '/config/keys.dart';
-import 'firebase_auth_service.dart';
 
 class AuthService {
   static final AuthApiService _api = AuthApiService();
@@ -15,10 +14,10 @@ class AuthService {
   /// Flush all NyStorage and cache before authentication
   static Future<void> flushAllStorageAndCache() async {
     // Preserve hasOpenedApp flag
-    final hasOpenedApp = await NyStorage.read('hasOpenedApp');
+    final hasOpenedApp = await Keys.hasOpenedApp.read();
     await NyStorage.clear(""); // Clear all NyStorage keys
-    if (hasOpenedApp != null) {
-      await NyStorage.save('hasOpenedApp', hasOpenedApp);
+    if (hasOpenedApp == true) {
+      await Keys.hasOpenedApp.save(true);
     }
     await cache().flush(); // Flush Nylo cache
   }
@@ -50,6 +49,11 @@ class AuthService {
         final cleanToken = response['token'].toString().trim();
         await Keys.auth.save(cleanToken);
         await NyStorage.save('token', cleanToken);
+
+        // Save login state for persistent login
+        await Keys.isLoggedIn.save(true);
+        await Keys.loginTimestamp.save(DateTime.now().millisecondsSinceEpoch);
+
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
           await _saveUserData(userData);
@@ -133,6 +137,10 @@ class AuthService {
         await Keys.auth.save(cleanToken);
         await NyStorage.save('token', cleanToken);
 
+        // Save login state for persistent login
+        await Keys.isLoggedIn.save(true);
+        await Keys.loginTimestamp.save(DateTime.now().millisecondsSinceEpoch);
+
         if (response['user'] != null) {
           final userData = Map<String, dynamic>.from(response['user']);
           await _saveUserData(userData);
@@ -168,6 +176,10 @@ class AuthService {
         final cleanToken = response['token'].toString().trim();
         await Keys.auth.save(cleanToken);
         await NyStorage.save('token', cleanToken);
+
+        // Save login state for persistent login
+        await Keys.isLoggedIn.save(true);
+        await Keys.loginTimestamp.save(DateTime.now().millisecondsSinceEpoch);
 
         if (response['user'] != null) {
           User user = User.fromJson(response['user']);
@@ -207,13 +219,59 @@ class AuthService {
       await Keys.selectedProfessional.flush();
       await Keys.bookingDraft.flush();
       await Keys.currentRegion.flush();
+
+      // Clear persistent login state
+      await Keys.isLoggedIn.flush();
+      await Keys.loginTimestamp.flush();
+
       await _notificationApi.clearUserSpecificCache();
     }
   }
 
   static Future<bool> isAuthenticated() async {
-    String? token = await NyStorage.read('token');
-    return token != null && token.isNotEmpty;
+    // Use Nylo's Auth.isAuthenticated() which checks the auth key
+    return await Auth.isAuthenticated();
+  }
+
+  /// Check if user is persistently logged in
+  static Future<bool> isPersistentlyLoggedIn() async {
+    try {
+      final isLoggedIn = await Keys.isLoggedIn.read();
+      final loginTimestamp = await Keys.loginTimestamp.read();
+
+      // Check if persistent login state exists
+      if (isLoggedIn != true || loginTimestamp == null) {
+        return false;
+      }
+
+      // Check if Nylo Auth is also authenticated (has valid token)
+      final isNyloAuthenticated = await Auth.isAuthenticated();
+      if (!isNyloAuthenticated) {
+        return false;
+      }
+
+      // Optional: Check if login is not too old (e.g., 30 days)
+      final loginTime = DateTime.fromMillisecondsSinceEpoch(loginTimestamp);
+      final now = DateTime.now();
+      final daysSinceLogin = now.difference(loginTime).inDays;
+
+      // If login is older than 30 days, consider it expired
+      if (daysSinceLogin > 30) {
+        await _clearPersistentLoginState();
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      print('Error checking persistent login: $e');
+      return false;
+    }
+  }
+
+  /// Clear persistent login state
+  static Future<void> _clearPersistentLoginState() async {
+    await Keys.isLoggedIn.flush();
+    await Keys.loginTimestamp.flush();
   }
 
   static Future<void> _saveUserData(Map<String, dynamic> userData) async {

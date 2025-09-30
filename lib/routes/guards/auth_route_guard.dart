@@ -1,4 +1,5 @@
-import '/resources/pages/home_page.dart';
+import '/resources/pages/sign_in_page.dart';
+import '/app/services/auth_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 /* Auth Route Guard
@@ -17,12 +18,12 @@ class AuthRouteGuard extends NyRouteGuard {
 
   @override
   onRequest(PageRequest pageRequest) async {
-    // print(data); // will give you access to the data passed to the route
-    // print(queryParameters); // will give you access to the BuildContext
+    // Check if user is persistently logged in
+    bool isPersistentlyLoggedIn = await AuthService.isPersistentlyLoggedIn();
 
-    bool isLoggedIn = (await Auth.isAuthenticated());
-    if (!isLoggedIn) {
-      return redirect(HomePage.path);
+    if (!isPersistentlyLoggedIn) {
+      // Redirect to sign-in page if not authenticated
+      return redirect(SignInPage.path);
     }
 
     return pageRequest;
