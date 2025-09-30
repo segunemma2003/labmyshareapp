@@ -50,48 +50,41 @@ import 'package:nylo_framework/nylo_framework.dart';
 |-------------------------------------------------------------------------- */
 
 appRouter() => nyRoutes((router) {
-      router.add(HomePage.path);
-
-      // Add your routes here ...
-      // router.add(NewPage.path, transitionType: TransitionType.fade());
-
-      // Example using grouped routes
-      // router.group(() => {
-      //   "route_guards": [AuthRouteGuard()],
-      //   "prefix": "/dashboard"
-      // }, (router) {
-      //
-      // });
-      router.add(NotFoundPage.path).unknownRoute();
+      // Public routes (no authentication required)
+      router.add(WelcomeScreenPage.path).initialRoute();
       router.add(SignUpPage.path);
       router.add(SignInPage.path);
       router.add(VerifyEmailPage.path);
       router.add(NewPasswordPage.path);
       router.add(CompleteProfilePage.path);
       router.add(ConfirmSelfiePage.path);
-      router.add(SelectRegionPage.path);
-      router.add(BaseNavigationHub.path);
-      router.add(SelectServicesPage.path);
-      router.add(SelectProfessionalPage.path);
-      router.add(AppointmentTimePage.path);
-      router.add(ReviewPage.path);
-      router.add(OpenAppointmentDetailPage.path);
-      router.add(PendingAppointmentDetailPage.path);
-      router.add(CloseAppointmentDetailPage.path);
-      router.add(ProfileDetailPage.path);
-      router.add(LocationChangePage.path);
-      router.add(PaymentDetailPage.path);
-      router.add(GetHelpPage.path);
-      router.add(ChatPage.path);
-      router.add(ProgressReportPage.path);
-      router.add(ProgressReportDetailsPage.path);
-      router.add(BookingDetailPage.path);
-
-      router.add(FaqsPage.path);
-      router.add(LegalPage.path);
-      router.add(WelcomeScreenPage.path).initialRoute();
       router.add(ForgotPasswordPage.path);
       router.add(ResetPasswordOTPPage.path);
-      router.add(SelectTimePage.path);
-      router.add(BookingDetailsPage.path);
+      router.add(FaqsPage.path);
+      router.add(LegalPage.path);
+
+      // Authenticated routes (require login)
+      router.add(BaseNavigationHub.path).authenticatedRoute();
+      router.add(SelectRegionPage.path).authenticatedRoute();
+      router.add(SelectServicesPage.path).authenticatedRoute();
+      router.add(SelectProfessionalPage.path).authenticatedRoute();
+      router.add(AppointmentTimePage.path).authenticatedRoute();
+      router.add(ReviewPage.path).authenticatedRoute();
+      router.add(OpenAppointmentDetailPage.path).authenticatedRoute();
+      router.add(PendingAppointmentDetailPage.path).authenticatedRoute();
+      router.add(CloseAppointmentDetailPage.path).authenticatedRoute();
+      router.add(ProfileDetailPage.path).authenticatedRoute();
+      router.add(LocationChangePage.path).authenticatedRoute();
+      router.add(PaymentDetailPage.path).authenticatedRoute();
+      router.add(GetHelpPage.path).authenticatedRoute();
+      router.add(ChatPage.path).authenticatedRoute();
+      router.add(ProgressReportPage.path).authenticatedRoute();
+      router.add(ProgressReportDetailsPage.path).authenticatedRoute();
+      router.add(BookingDetailPage.path).authenticatedRoute();
+      router.add(SelectTimePage.path).authenticatedRoute();
+      router.add(BookingDetailsPage.path).authenticatedRoute();
+      router.add(HomePage.path).authenticatedRoute();
+
+      // Error route
+      router.add(NotFoundPage.path).unknownRoute();
     });

@@ -30,6 +30,7 @@ class _SignInPageState extends NyPage<SignInPage> {
   Widget view(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -41,7 +42,7 @@ class _SignInPageState extends NyPage<SignInPage> {
             left: 24.0,
             right: 24.0,
             top: 24.0,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24.0,
+            bottom: 24.0,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
