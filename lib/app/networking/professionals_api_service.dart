@@ -137,6 +137,7 @@ class ProfessionalsApiService extends NyApiService {
     String? date,
     String? startDate,
     String? endDate,
+    int? regionId,
   }) async {
     final queryParams = {
       "professional_id": professionalId.toString(),
@@ -145,11 +146,12 @@ class ProfessionalsApiService extends NyApiService {
     if (date != null) queryParams["date"] = date;
     if (startDate != null) queryParams["start_date"] = startDate;
     if (endDate != null) queryParams["end_date"] = endDate;
+    if (regionId != null) queryParams["region_id"] = regionId.toString();
     return await network(
       request: (request) => request.get("/professionals/available-slots/",
           queryParameters: queryParams),
       cacheKey:
-          "slots_${professionalId}_${serviceId}_${date ?? ''}_${startDate ?? ''}_${endDate ?? ''}",
+          "slots_${professionalId}_${serviceId}_${date ?? ''}_${startDate ?? ''}_${endDate ?? ''}_${regionId ?? ''}",
       cacheDuration: const Duration(minutes: 5), // Short cache for availability
     );
   }

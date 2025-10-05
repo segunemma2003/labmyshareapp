@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/app/models/professional.dart';
 import 'package:flutter_app/app/models/service_item.dart';
 import 'package:flutter_app/app/services/professionals_data_service.dart';
+import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/resources/pages/review_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -75,12 +76,17 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
     final lastDay = DateTime(year, m + 1, 0);
     final startDateStr = DateFormat('yyyy-MM-dd').format(firstDay);
     final endDateStr = DateFormat('yyyy-MM-dd').format(lastDay);
+    // Get current user's region
+    final user = await AuthService.getCurrentUser();
+    final regionId = user?.currentRegion?.id;
+
     // Query all available slots for the month in one call
     final slots = await ProfessionalsDataService.getAvailableSlots(
       professionalId: _selectedProfessional!.id!,
       serviceId: serviceId,
       startDate: startDateStr,
       endDate: endDateStr,
+      regionId: regionId,
     );
     Set<DateTime> available = {};
     if (slots != null && slots.isNotEmpty) {
@@ -117,10 +123,16 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
     }
     final serviceId = _selectedServices.first.id;
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
+
+    // Get current user's region
+    final user = await AuthService.getCurrentUser();
+    final regionId = user?.currentRegion?.id;
+
     final slots = await ProfessionalsDataService.getAvailableSlots(
       professionalId: _selectedProfessional!.id!,
       serviceId: serviceId,
       date: dateStr,
+      regionId: regionId,
     );
     if (slots == null || slots.isEmpty) {
       setState(() {

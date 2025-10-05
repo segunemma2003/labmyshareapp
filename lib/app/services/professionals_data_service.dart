@@ -76,6 +76,7 @@ class ProfessionalsDataService {
     String? date,
     String? startDate,
     String? endDate,
+    int? regionId,
   }) async {
     try {
       return await _api.getAvailableSlots(
@@ -84,6 +85,7 @@ class ProfessionalsDataService {
         date: date,
         startDate: startDate,
         endDate: endDate,
+        regionId: regionId,
       );
     } catch (e) {
       print('Get available slots error: $e');

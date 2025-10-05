@@ -4,6 +4,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import 'package:flutter_app/app/services/professionals_data_service.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
+import 'package:intl/intl.dart';
 import '../../resources/pages/select_time_page.dart';
 
 class SelectProfessionalPage extends NyStatefulWidget {
@@ -19,6 +20,7 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
   List<Professional> professionals = [];
   bool _loading = true;
   bool _error = false;
+  Map<int, bool> _professionalAvailability = {};
 
   @override
   get init => () async {
@@ -42,8 +44,22 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         serviceId: serviceId,
         regionId: regionId,
       );
+
+      // Check availability for each professional
+      final availabilityMap = <int, bool>{};
+      if (apiProfessionals != null && serviceId != null) {
+        for (final professional in apiProfessionals) {
+          if (professional.id != null) {
+            final hasAvailability = await _checkProfessionalAvailability(
+                professional.id!, serviceId);
+            availabilityMap[professional.id!] = hasAvailability;
+          }
+        }
+      }
+
       setState(() {
         professionals = apiProfessionals ?? [];
+        _professionalAvailability = availabilityMap;
         _loading = false;
       });
     } catch (e) {
@@ -52,6 +68,62 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         _error = true;
       });
     }
+  }
+
+  Future<bool> _checkProfessionalAvailability(
+      int professionalId, int serviceId) async {
+    try {
+      // Check for available slots in the next 30 days
+      final today = DateTime.now();
+      final futureDate = today.add(Duration(days: 30));
+      final startDate = DateFormat('yyyy-MM-dd').format(today);
+      final endDate = DateFormat('yyyy-MM-dd').format(futureDate);
+
+      // Get current user's region
+      final user = await AuthService.getCurrentUser();
+      final regionId = user?.currentRegion?.id;
+
+      final slots = await ProfessionalsDataService.getAvailableSlots(
+        professionalId: professionalId,
+        serviceId: serviceId,
+        startDate: startDate,
+        endDate: endDate,
+        regionId: regionId,
+      );
+
+      // Check if there are any available slots
+      if (slots != null && slots.isNotEmpty) {
+        for (var slot in slots) {
+          if (slot is Map && slot['is_available'] == true) {
+            return true; // Found at least one available slot
+          }
+        }
+      }
+
+      return false; // No available slots found
+    } catch (e) {
+      print('Error checking professional availability: $e');
+      return false; // Assume unavailable on error
+    }
+  }
+
+  void _showUnavailableMessage(String professionalName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Professional Unavailable'),
+          content: Text(
+              '$professionalName is currently unavailable for booking. Please select another professional.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -107,97 +179,145 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                             final isSelected =
                                 selectedProfessionalIndex == index;
 
+                            final isAvailable = professional.id != null
+                                ? _professionalAvailability[professional.id!] ??
+                                    true
+                                : true;
+
                             return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedProfessionalIndex = index;
-                                });
-                              },
+                              onTap: isAvailable
+                                  ? () {
+                                      setState(() {
+                                        selectedProfessionalIndex = index;
+                                      });
+                                    }
+                                  : () {
+                                      _showUnavailableMessage(
+                                          professional.name ?? 'Professional');
+                                    },
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: isSelected
                                         ? Colors.black
-                                        : Colors.grey.shade300,
+                                        : isAvailable
+                                            ? Colors.grey.shade300
+                                            : Colors.grey.shade400,
                                     width: isSelected ? 2 : 1,
                                   ),
-                                  color: Colors.white,
+                                  color: isAvailable
+                                      ? Colors.white
+                                      : Colors.grey.shade100,
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                child: Stack(
                                   children: [
-                                    // Profile Image or Logo
-                                    Container(
-                                      width: 60,
-                                      height: 60,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: professional.isAnyProfessional ==
-                                                true
-                                            ? const Color(0xFF4A5C6A)
-                                            : Colors.grey.shade200,
-                                      ),
-                                      child: professional.isAnyProfessional ==
-                                              true
-                                          ? const Center(
-                                              child: Text(
-                                                "H",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 24,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontStyle: FontStyle.italic,
-                                                ),
-                                              ),
-                                            )
-                                          : professional.imageUrl != null
-                                              ? ClipOval(
-                                                  child: Image.asset(
-                                                    professional.imageUrl!,
-                                                    width: 60,
-                                                    height: 60,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder: (context,
-                                                        error, stackTrace) {
-                                                      return Container(
+                                    Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        // Profile Image or Logo
+                                        Container(
+                                          width: 60,
+                                          height: 60,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: professional
+                                                        .isAnyProfessional ==
+                                                    true
+                                                ? const Color(0xFF4A5C6A)
+                                                : Colors.grey.shade200,
+                                          ),
+                                          child: professional
+                                                      .isAnyProfessional ==
+                                                  true
+                                              ? const Center(
+                                                  child: Text(
+                                                    "H",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 24,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                )
+                                              : professional.imageUrl != null
+                                                  ? ClipOval(
+                                                      child: Image.asset(
+                                                        professional.imageUrl!,
                                                         width: 60,
                                                         height: 60,
-                                                        color: Colors
-                                                            .grey.shade300,
-                                                        child: const Icon(
-                                                            Icons.person,
-                                                            size: 30),
-                                                      );
-                                                    },
-                                                  ).localAsset(),
-                                                )
-                                              : const Icon(Icons.person,
-                                                  size: 30),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Name
-                                    Text(
-                                      professional.name ?? "",
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    // Subtitle
-                                    if (professional.subtitle != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        professional.subtitle!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade600,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder: (context,
+                                                            error, stackTrace) {
+                                                          return Container(
+                                                            width: 60,
+                                                            height: 60,
+                                                            color: Colors
+                                                                .grey.shade300,
+                                                            child: const Icon(
+                                                                Icons.person,
+                                                                size: 30),
+                                                          );
+                                                        },
+                                                      ).localAsset(),
+                                                    )
+                                                  : const Icon(Icons.person,
+                                                      size: 30),
                                         ),
-                                        textAlign: TextAlign.center,
+                                        const SizedBox(height: 12),
+                                        // Name
+                                        Text(
+                                          professional.name ?? "",
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        // Subtitle
+                                        if (professional.subtitle != null) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            professional.subtitle!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    // Unavailable indicator
+                                    if (!isAvailable)
+                                      Positioned(
+                                        top: 8,
+                                        right: 8,
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade100,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                                color: Colors.red.shade300),
+                                          ),
+                                          child: Text(
+                                            'Professional is Unavailable',
+                                            style: TextStyle(
+                                              color: Colors.red.shade700,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ],
                                   ],
                                 ),
                               ),
@@ -246,6 +366,23 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                             final selectedProfessional =
                                                 professionals[
                                                     selectedProfessionalIndex!];
+
+                                            // Check if selected professional is available
+                                            final isAvailable =
+                                                selectedProfessional.id != null
+                                                    ? _professionalAvailability[
+                                                            selectedProfessional
+                                                                .id!] ??
+                                                        true
+                                                    : true;
+
+                                            if (!isAvailable) {
+                                              _showUnavailableMessage(
+                                                  selectedProfessional.name ??
+                                                      'Professional');
+                                              return;
+                                            }
+
                                             final navData = widget.data() ?? {};
                                             final selectedServices =
                                                 navData['selectedServices']
