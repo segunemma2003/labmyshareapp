@@ -156,14 +156,30 @@ class ProfessionalsApiService extends NyApiService {
     );
   }
 
-  Future<List<dynamic>?> getUnavailability(
-      {required int professionalId}) async {
+  Future<List<dynamic>?> getUnavailability({
+    required int professionalId,
+    int? serviceId,
+    String? date,
+    String? startDate,
+    String? endDate,
+    int? regionId,
+  }) async {
+    final queryParams = {
+      "professional_id": professionalId.toString(),
+    };
+    if (serviceId != null) queryParams["service_id"] = serviceId.toString();
+    if (date != null) queryParams["date"] = date;
+    if (startDate != null) queryParams["start_date"] = startDate;
+    if (endDate != null) queryParams["end_date"] = endDate;
+    if (regionId != null) queryParams["region_id"] = regionId.toString();
+
     return await network(
       request: (request) => request.get(
         "/professionals/unavailability/",
-        queryParameters: {"professional_id": professionalId},
+        queryParameters: queryParams,
       ),
-      cacheKey: "unavailability_$professionalId",
+      cacheKey:
+          "unavailability_${professionalId}_${serviceId ?? ''}_${date ?? ''}_${startDate ?? ''}_${endDate ?? ''}_${regionId ?? ''}",
       cacheDuration: const Duration(minutes: 10),
     );
   }

@@ -1,6 +1,4 @@
 import 'package:flutter_app/app/networking/professionals_api_service.dart';
-import 'package:nylo_framework/nylo_framework.dart';
-import '/app/networking/api_service.dart';
 import '/app/models/professional.dart';
 
 class ProfessionalsDataService {
@@ -93,10 +91,23 @@ class ProfessionalsDataService {
     }
   }
 
-  static Future<List<dynamic>?> getUnavailability(
-      {required int professionalId}) async {
+  static Future<List<dynamic>?> getUnavailability({
+    required int professionalId,
+    int? serviceId,
+    String? date,
+    String? startDate,
+    String? endDate,
+    int? regionId,
+  }) async {
     try {
-      return await _api.getUnavailability(professionalId: professionalId);
+      return await _api.getUnavailability(
+        professionalId: professionalId,
+        serviceId: serviceId,
+        date: date,
+        startDate: startDate,
+        endDate: endDate,
+        regionId: regionId,
+      );
     } catch (e) {
       print('Get unavailability error: $e');
       return null;
