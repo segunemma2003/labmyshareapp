@@ -1,6 +1,4 @@
 PODS:
-  - add_2_calendar (0.0.1):
-    - Flutter
   - app_badge_plus (1.2.3):
     - Flutter
   - Firebase/Auth (12.2.0):
@@ -133,7 +131,6 @@ PODS:
     - Flutter
 
 DEPENDENCIES:
-  - add_2_calendar (from `.symlinks/plugins/add_2_calendar/ios`)
   - app_badge_plus (from `.symlinks/plugins/app_badge_plus/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -170,8 +167,6 @@ SPEC REPOS:
     - StripeUICore
 
 EXTERNAL SOURCES:
-  add_2_calendar:
-    :path: ".symlinks/plugins/add_2_calendar/ios"
   app_badge_plus:
     :path: ".symlinks/plugins/app_badge_plus/ios"
   firebase_auth:
@@ -200,7 +195,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/webview_flutter_wkwebview/ios"
 
 SPEC CHECKSUMS:
-  add_2_calendar: 5eee66d5a3b99cd5e1487a7e03abd4e3ac4aff11
   app_badge_plus: 73079d53b6a318c723de4d8aded465fbc4e92897
   Firebase: 26f6f8d460603af3df970ad505b16b15f5e2e9a1
   firebase_auth: b816b86f9d5a1df1a68603bf19fc13d37ddd052c

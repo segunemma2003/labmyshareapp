@@ -5,8 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter_app/app/services/booking_service.dart';
 import 'package:flutter_app/app/services/region_service.dart';
-import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 class ReviewPage extends NyStatefulWidget {
   static RouteView path = ("/review", (_) => ReviewPage());
@@ -538,7 +539,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
     );
   }
 
-  void _addToCalendar() {
+  Future<void> _addToCalendar() async {
     if (selectedDate == null || selectedTime == null) {
       showToast(
         title: "Error",
@@ -570,34 +571,52 @@ class _ReviewPageState extends NyPage<ReviewPage> {
       }
       final endTime = startTime.add(Duration(minutes: totalDuration));
 
-      // Create calendar event
-      final Event event = Event(
-        title: 'Beauty Spa Appointment',
-        description: _buildCalendarDescription(),
-        location: 'Labs by Shea',
-        startDate: startTime,
-        endDate: endTime,
-        androidParams: AndroidParams(
-          emailInvites: [], // Add emails if you want to invite people
-        ),
-        iosParams: IOSParams(
-          reminder: Duration(minutes: 30), // 30 minutes before
-        ),
-      );
+      // Format dates for calendar URLs
+      final startDateStr = DateFormat('yyyyMMddTHHmmss').format(startTime);
+      final endDateStr = DateFormat('yyyyMMddTHHmmss').format(endTime);
 
-      // Add to calendar
-      Add2Calendar.addEvent2Cal(event);
+      final title = Uri.encodeComponent('Beauty Spa Appointment');
+      final description = Uri.encodeComponent(_buildCalendarDescription());
+      final location = Uri.encodeComponent('Labs by Shea');
 
-      // Mark calendar as added
-      setState(() {
-        calendarAdded = true;
-      });
+      String calendarUrl;
 
-      showToast(
-        title: "Success",
-        description: "Appointment added to your calendar",
-        style: ToastNotificationStyleType.success,
-      );
+      if (Platform.isAndroid) {
+        // Google Calendar URL for Android
+        calendarUrl =
+            'https://calendar.google.com/calendar/render?action=TEMPLATE'
+            '&text=$title'
+            '&dates=$startDateStr/$endDateStr'
+            '&details=$description'
+            '&location=$location';
+      } else {
+        // iOS Calendar URL
+        calendarUrl = 'calshow:'
+            '&title=$title'
+            '&startdate=$startDateStr'
+            '&enddate=$endDateStr'
+            '&notes=$description'
+            '&location=$location';
+      }
+
+      final Uri uri = Uri.parse(calendarUrl);
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        // Mark calendar as added
+        setState(() {
+          calendarAdded = true;
+        });
+
+        showToast(
+          title: "Success",
+          description: "Opening calendar with your appointment",
+          style: ToastNotificationStyleType.success,
+        );
+      } else {
+        throw Exception('Could not launch calendar URL');
+      }
     } catch (e) {
       print('Error adding to calendar: $e');
       showToast(

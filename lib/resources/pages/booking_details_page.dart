@@ -3,7 +3,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import '../../app/services/booking_service.dart';
 import '../../app/models/booking.dart';
 import 'package:intl/intl.dart';
-import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:io' show Platform;
 import 'package:flutter_stripe/flutter_stripe.dart';
 
@@ -125,7 +125,7 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
         : bookingId.toUpperCase();
   }
 
-  void _addToCalendar() {
+  Future<void> _addToCalendar() async {
     print('📅 Adding booking to calendar...');
     print('📅 Platform: ${Platform.isAndroid ? 'Android' : 'iOS'}');
     print('📅 Booking ID: ${booking?.bookingId}');
@@ -163,60 +163,55 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       final durationMinutes = booking!.durationMinutes ?? 60; // Default 1 hour
       final endTime = startTime.add(Duration(minutes: durationMinutes));
 
-      // Create calendar event with platform-specific optimizations
-      final Event event = Event(
-        title: 'Beauty Spa Appointment - ${booking!.serviceName ?? 'Service'}',
-        description: _buildCalendarDescription(),
-        location: 'Labs by Shea',
-        startDate: startTime,
-        endDate: endTime,
-        androidParams: AndroidParams(
-          emailInvites: [], // No email invites for now
-        ),
-        iosParams: IOSParams(
-          reminder: Duration(minutes: 30), // 30 minutes before
-        ),
-      );
+      // Format dates for calendar URLs
+      final startDateStr = DateFormat('yyyyMMddTHHmmss').format(startTime);
+      final endDateStr = DateFormat('yyyyMMddTHHmmss').format(endTime);
 
-      print('📅 Event created for ${Platform.isAndroid ? 'Android' : 'iOS'}');
-      print('📅 Event details:');
-      print('  - Title: ${event.title}');
-      print('  - Location: ${event.location}');
-      print('  - Start: ${event.startDate}');
-      print('  - End: ${event.endDate}');
-      print(
-          '  - Description length: ${event.description?.length ?? 0} characters');
+      final title = Uri.encodeComponent(
+          'Beauty Spa Appointment - ${booking!.serviceName ?? 'Service'}');
+      final description = Uri.encodeComponent(_buildCalendarDescription());
+      final location = Uri.encodeComponent('Labs by Shea');
 
-      // Add to calendar
-      print('📅 Creating calendar event...');
-      print('📅 Event title: ${event.title}');
-      print('📅 Start time: ${event.startDate}');
-      print('📅 End time: ${event.endDate}');
+      String calendarUrl;
 
-      Add2Calendar.addEvent2Cal(event);
-
-      print('📅 Calendar event created successfully');
-      print('📅 Platform: ${Platform.isAndroid ? 'Android' : 'iOS'}');
-
-      String successMessage = "Appointment added to your calendar";
-
-      // Platform-specific success messages
       if (Platform.isAndroid) {
-        successMessage = "Opening Android calendar with your appointment";
-      } else if (Platform.isIOS) {
-        successMessage = "Opening iOS calendar with your appointment";
+        // Google Calendar URL for Android
+        calendarUrl =
+            'https://calendar.google.com/calendar/render?action=TEMPLATE'
+            '&text=$title'
+            '&dates=$startDateStr/$endDateStr'
+            '&details=$description'
+            '&location=$location';
+      } else {
+        // iOS Calendar URL
+        calendarUrl = 'calshow:'
+            '&title=$title'
+            '&startdate=$startDateStr'
+            '&enddate=$endDateStr'
+            '&notes=$description'
+            '&location=$location';
       }
 
-      showToast(
-        title: "Success",
-        description: successMessage,
-        style: ToastNotificationStyleType.success,
-      );
+      print('📅 Opening calendar URL: $calendarUrl');
+
+      final Uri uri = Uri.parse(calendarUrl);
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        showToast(
+          title: "Success",
+          description: "Opening calendar with your appointment",
+          style: ToastNotificationStyleType.success,
+        );
+      } else {
+        throw Exception('Could not launch calendar URL');
+      }
     } catch (e) {
       print('❌ Error adding to calendar: $e');
       print('❌ Platform: ${Platform.isAndroid ? 'Android' : 'iOS'}');
 
-      String errorMessage = "Could not add to calendar. Please try again.";
+      String errorMessage = "Could not open calendar. Please try again.";
 
       // Platform-specific error messages
       if (Platform.isAndroid) {
