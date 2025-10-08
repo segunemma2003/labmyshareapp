@@ -1,3 +1,6 @@
+# Ignore iOS build artifacts
+ios/Build/
+
 # Miscellaneous
 *.class
 *.log
