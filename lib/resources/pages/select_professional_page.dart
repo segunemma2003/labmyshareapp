@@ -91,11 +91,28 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         regionId: regionId,
       );
 
+
+      print("`Checking availability for Professional ID: $professionalId, Service ID: $serviceId");
+      print("Slots: $slots");
+
       // Check if there are any available slots
       if (slots != null && slots.isNotEmpty) {
+        print("Slots are not empty");
         for (var slot in slots) {
-          if (slot is Map && slot['is_available'] == true) {
-            return true; // Found at least one available slot
+
+          print("Slot details: ");
+          print(slot);
+          print("--------------------");
+          if (slot["slots"].length> 0) {
+            slot["slots"].forEach((s) {
+              print("Individual slot: $s");
+              if (s["is_available"] == true) {
+                print("Found available slot: $s");
+                 return true; 
+              }
+            });
+            print("i got here");
+           // Found at least one available slot
           }
         }
       }
