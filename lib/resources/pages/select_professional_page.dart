@@ -45,16 +45,20 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         regionId: regionId,
       );
 
-      // Check availability for each professional
+      // Check availability for each professional (concurrently) and collect all with slots
       final availabilityMap = <int, bool>{};
       if (apiProfessionals != null && serviceId != null) {
+        final List<Future<void>> tasks = [];
         for (final professional in apiProfessionals) {
           if (professional.id != null) {
-            final hasAvailability = await _checkProfessionalAvailability(
-                professional.id!, serviceId);
-            availabilityMap[professional.id!] = hasAvailability;
+            tasks.add(() async {
+              final hasAvailability = await _checkProfessionalAvailability(
+                  professional.id!, serviceId);
+              availabilityMap[professional.id!] = hasAvailability;
+            }());
           }
         }
+        await Future.wait(tasks);
       }
 
       setState(() {
@@ -68,6 +72,22 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         _error = true;
       });
     }
+  }
+
+  /// Returns the IDs of professionals that have at least one available slot
+  Future<Set<int>> _getProfessionalsWithSlots(
+      List<Professional> professionals, int serviceId) async {
+    final Set<int> availableIds = {};
+    final List<Future<void>> tasks = [];
+    for (final p in professionals) {
+      if (p.id == null) continue;
+      tasks.add(() async {
+        final ok = await _checkProfessionalAvailability(p.id!, serviceId);
+        if (ok) availableIds.add(p.id!);
+      }());
+    }
+    await Future.wait(tasks);
+    return availableIds;
   }
 
   Future<bool> _checkProfessionalAvailability(
@@ -91,28 +111,28 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         regionId: regionId,
       );
 
-
-      print("`Checking availability for Professional ID: $professionalId, Service ID: $serviceId");
+      print(
+          "`Checking availability for Professional ID: $professionalId, Service ID: $serviceId");
       print("Slots: $slots");
 
       // Check if there are any available slots
       if (slots != null && slots.isNotEmpty) {
         print("Slots are not empty");
-        for (var slot in slots) {
-
+        for (final slot in slots) {
           print("Slot details: ");
           print(slot);
           print("--------------------");
-          if (slot["slots"].length> 0) {
-            slot["slots"].forEach((s) {
+
+          final dynamic inner = slot["slots"];
+          if (inner is List && inner.isNotEmpty) {
+            for (final s in inner) {
               print("Individual slot: $s");
-              if (s["is_available"] == true) {
+              final isAvailable = (s is Map && s["is_available"] == true);
+              if (isAvailable) {
                 print("Found available slot: $s");
-                 return true; 
+                return true; // Early return when any available slot is found
               }
-            });
-            print("i got here");
-           // Found at least one available slot
+            }
           }
         }
       }
@@ -196,22 +216,37 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                             final isSelected =
                                 selectedProfessionalIndex == index;
 
-                            final isAvailable = professional.id != null
-                                ? _professionalAvailability[professional.id!] ??
-                                    true
-                                : true;
+                            // Always show professionals as selectable; check availability on tap
+                            final isAvailable = true;
 
                             return GestureDetector(
-                              onTap: isAvailable
-                                  ? () {
-                                      setState(() {
-                                        selectedProfessionalIndex = index;
-                                      });
-                                    }
-                                  : () {
-                                      _showUnavailableMessage(
-                                          professional.name ?? 'Professional');
-                                    },
+                              onTap: () async {
+                                // Check availability on tap
+                                final navData = widget.data() ?? {};
+                                final selectedServices =
+                                    navData['selectedServices']
+                                            as List<Service>? ??
+                                        [];
+                                final int? serviceId =
+                                    selectedServices.isNotEmpty
+                                        ? selectedServices.first.id
+                                        : null;
+
+                                if (professional.id != null &&
+                                    serviceId != null) {
+                                  final available =
+                                      await _checkProfessionalAvailability(
+                                          professional.id!, serviceId);
+                                  if (!available) {
+                                    _showUnavailableMessage(
+                                        professional.name ?? 'Professional');
+                                    return;
+                                  }
+                                }
+                                setState(() {
+                                  selectedProfessionalIndex = index;
+                                });
+                              },
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
@@ -311,30 +346,7 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                       ],
                                     ),
                                     // Unavailable indicator
-                                    if (!isAvailable)
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: Container(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.red.shade100,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: Colors.red.shade300),
-                                          ),
-                                          child: Text(
-                                            'Professional is Unavailable',
-                                            style: TextStyle(
-                                              color: Colors.red.shade700,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
+                                    // No badge; we check availability on interaction
                                   ],
                                 ),
                               ),
