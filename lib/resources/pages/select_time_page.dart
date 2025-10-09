@@ -406,9 +406,9 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (_selectedProfessional?.imageUrl != null)
+          if (_selectedProfessional?.profileImageUrl != null)
             CircleAvatar(
-              backgroundImage: AssetImage(_selectedProfessional!.imageUrl!),
+              backgroundImage: NetworkImage(_selectedProfessional!.profileImageUrl!),
               radius: 32,
             ),
           SizedBox(height: 16),

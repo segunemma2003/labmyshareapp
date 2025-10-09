@@ -50,7 +50,11 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
       final loaded = apiProfessionals ?? [];
       print("Loaded professionals: ${loaded.length}");
       for (final p in loaded) {
-        print("Professional => id: ${p.id}, name: ${p.displayName}");
+        print(
+            "Professional => id: ${p.id}, name: ${p.displayName}, imageUrl: ${p.imageUrl}, profileImageUrl: ${p.profileImageUrl}");
+        if (p.user != null) {
+          print("  User data: ${p.user}");
+        }
       }
 
       setState(() {
@@ -271,15 +275,19 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                                 ? const Color(0xFF4A5C6A)
                                                 : Colors.grey.shade200,
                                           ),
-                                          child: professional.imageUrl != null
+                                          child: professional.profileImageUrl !=
+                                                  null
                                               ? ClipOval(
                                                   child: Image.network(
-                                                    professional.imageUrl!,
+                                                    professional
+                                                        .profileImageUrl!,
                                                     width: 60,
                                                     height: 60,
                                                     fit: BoxFit.cover,
                                                     errorBuilder: (context,
                                                         error, stackTrace) {
+                                                      print(
+                                                          'Error loading professional image: $error');
                                                       return Container(
                                                         width: 60,
                                                         height: 60,

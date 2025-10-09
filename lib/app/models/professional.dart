@@ -53,7 +53,11 @@ class Professional extends Model {
         (user != null ? "${user!['first_name']} ${user!['last_name']}" : null);
     subtitle = data['subtitle'] ?? bio;
     isAnyProfessional = data['isAnyProfessional'];
-    imageUrl = data['imageUrl'];
+    
+    // Get image URL from multiple possible sources
+    imageUrl = data['imageUrl'] ?? 
+               data['profile_picture'] ?? 
+               (user != null ? user!['profile_picture'] : null);
   }
 
   @override
@@ -90,4 +94,10 @@ class Professional extends Model {
           ? "${user!['first_name']} ${user!['last_name']}"
           : "Unknown");
   double get ratingDouble => double.tryParse(rating ?? '0') ?? 0.0;
+  
+  /// Get the professional's profile image URL from multiple sources
+  String? get profileImageUrl {
+    return imageUrl ?? 
+           (user != null ? user!['profile_picture'] : null);
+  }
 }
