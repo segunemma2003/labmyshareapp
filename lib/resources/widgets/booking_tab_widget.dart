@@ -23,6 +23,7 @@ class _BookingTabState extends NyState<BookingTab>
   bool loading = true;
   String? error;
   String _currencySymbol = '£'; // Default currency symbol
+  bool _hasRefreshedCurrency = false;
 
   @override
   get init => () async {
@@ -30,6 +31,33 @@ class _BookingTabState extends NyState<BookingTab>
         await _loadCurrencySymbol();
         await _loadBookings();
       };
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only refresh currency symbol if we haven't already done so recently
+    if (!_hasRefreshedCurrency) {
+      _refreshCurrencySymbol();
+    }
+  }
+
+  void _refreshCurrencySymbol() async {
+    try {
+      final newCurrencySymbol = await RegionService.getCurrentCurrencySymbol();
+      if (newCurrencySymbol != _currencySymbol) {
+        setState(() {
+          _currencySymbol = newCurrencySymbol;
+          _hasRefreshedCurrency = true;
+        });
+        // Reset the flag after a short delay to allow future refreshes
+        Future.delayed(Duration(seconds: 2), () {
+          _hasRefreshedCurrency = false;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing currency symbol: $e');
+    }
+  }
 
   Future<void> _loadCurrencySymbol() async {
     try {

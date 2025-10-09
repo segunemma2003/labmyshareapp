@@ -14,7 +14,7 @@ class RegionService {
       print(
           'RegionService: Response type: ${response.runtimeType}'); // Debug log
 
-      if (response != null && response is List) {
+      if (response is List) {
         final regions = response
             .map((json) => Region.fromJson(json as Map<String, dynamic>))
             .toList();
@@ -79,6 +79,21 @@ class RegionService {
     } catch (e) {
       print('RegionService.formatPrice error: $e');
       return '£${price.toString()}'; // Default fallback
+    }
+  }
+
+  /// Force refresh currency symbol cache
+  /// This can be called when region changes to ensure fresh data
+  static Future<void> refreshCurrencyCache() async {
+    try {
+      // Clear any cached region data to force fresh fetch
+      final regionCode = await NyStorage.read(Keys.currentRegion);
+      if (regionCode != null) {
+        // Force a fresh fetch of the region data
+        await getRegion(code: regionCode);
+      }
+    } catch (e) {
+      print('RegionService.refreshCurrencyCache error: $e');
     }
   }
 }

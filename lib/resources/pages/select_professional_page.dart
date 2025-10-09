@@ -5,6 +5,8 @@ import 'package:flutter_app/app/services/professionals_data_service.dart';
 import 'package:flutter_app/app/services/auth_service.dart';
 import 'package:flutter_app/app/models/service_item.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_app/config/keys.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 import '../../resources/pages/select_time_page.dart';
 
 class SelectProfessionalPage extends NyStatefulWidget {
@@ -150,6 +152,8 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         selectedServices.fold(0, (sum, s) => sum + (s.regionalPrice ?? 0));
     totalPrice += serviceAddOns.values.expand((list) => list).fold(
         0, (sum, addon) => sum + (double.tryParse(addon.price ?? "0") ?? 0));
+    final Future<String> currencySymbolFuture =
+        RegionService.getCurrentCurrencySymbol();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -218,6 +222,18 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                     return;
                                   }
                                 }
+
+                                // Clear caches and persist selected professional
+                                try {
+                                  await Keys.bookingDraft.flush();
+                                  await Keys.selectedProfessional.flush();
+                                  await Keys.selectedProfessional
+                                      .save(professional.toJson());
+                                  // Clear cached API data so prices/currency refresh
+                                  await NyStorage.clear("");
+                                  await cache().flush();
+                                } catch (_) {}
+
                                 setState(() {
                                   selectedProfessionalIndex = index;
                                 });
@@ -330,13 +346,19 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                "£${totalPrice.toStringAsFixed(0)}",
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                ),
+                              FutureBuilder<String>(
+                                future: currencySymbolFuture,
+                                builder: (context, snapshot) {
+                                  final symbol = snapshot.data ?? '£';
+                                  return Text(
+                                    "$symbol${totalPrice.toStringAsFixed(0)}",
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  );
+                                },
                               ),
                               Container(
                                 width: 120,

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_app/app/networking/auth_api_service.dart';
 import 'package:flutter_app/app/networking/notification_api_service.dart';
 import 'package:flutter_app/app/networking/services_api_service.dart';
+import 'package:flutter_app/app/services/region_service.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/app/models/user.dart';
 import '/config/keys.dart';
@@ -475,6 +476,12 @@ class AuthService {
         await _notificationApi.clearProfessionalsCache();
         await ServicesApiService().clearCache();
         await cache().flush();
+
+        // Refresh currency symbol cache to ensure fresh data
+        await RegionService.refreshCurrencyCache();
+
+        // Region switched successfully - cache cleared and user updated
+
         return true;
       }
       return false;
