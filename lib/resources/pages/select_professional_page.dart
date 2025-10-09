@@ -20,7 +20,6 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
   List<Professional> professionals = [];
   bool _loading = true;
   bool _error = false;
-  Map<int, bool> _professionalAvailability = {};
 
   @override
   get init => () async {
@@ -35,7 +34,7 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
     try {
       final user = await AuthService.getCurrentUser();
       final regionId = user?.currentRegion?.id;
-      // Get selected services from navigation data
+      // Get selected services from navigation data (single current service)
       final selectedServices =
           (widget.data()?['selectedServices'] as List<Service>?) ?? [];
       final int? serviceId =
@@ -45,25 +44,15 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
         regionId: regionId,
       );
 
-      // Check availability for each professional (concurrently) and collect all with slots
-      final availabilityMap = <int, bool>{};
-      if (apiProfessionals != null && serviceId != null) {
-        final List<Future<void>> tasks = [];
-        for (final professional in apiProfessionals) {
-          if (professional.id != null) {
-            tasks.add(() async {
-              final hasAvailability = await _checkProfessionalAvailability(
-                  professional.id!, serviceId);
-              availabilityMap[professional.id!] = hasAvailability;
-            }());
-          }
-        }
-        await Future.wait(tasks);
+      // Log all professionals that will be displayed
+      final loaded = apiProfessionals ?? [];
+      print("Loaded professionals: ${loaded.length}");
+      for (final p in loaded) {
+        print("Professional => id: ${p.id}, name: ${p.displayName}");
       }
 
       setState(() {
-        professionals = apiProfessionals ?? [];
-        _professionalAvailability = availabilityMap;
+        professionals = loaded;
         _loading = false;
       });
     } catch (e) {
@@ -74,21 +63,7 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
     }
   }
 
-  /// Returns the IDs of professionals that have at least one available slot
-  Future<Set<int>> _getProfessionalsWithSlots(
-      List<Professional> professionals, int serviceId) async {
-    final Set<int> availableIds = {};
-    final List<Future<void>> tasks = [];
-    for (final p in professionals) {
-      if (p.id == null) continue;
-      tasks.add(() async {
-        final ok = await _checkProfessionalAvailability(p.id!, serviceId);
-        if (ok) availableIds.add(p.id!);
-      }());
-    }
-    await Future.wait(tasks);
-    return availableIds;
-  }
+  //
 
   Future<bool> _checkProfessionalAvailability(
       int professionalId, int serviceId) async {
@@ -280,45 +255,31 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                                 ? const Color(0xFF4A5C6A)
                                                 : Colors.grey.shade200,
                                           ),
-                                          child: professional
-                                                      .isAnyProfessional ==
-                                                  true
-                                              ? const Center(
-                                                  child: Text(
-                                                    "H",
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 24,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      fontStyle:
-                                                          FontStyle.italic,
-                                                    ),
-                                                  ),
-                                                )
-                                              : professional.imageUrl != null
-                                                  ? ClipOval(
-                                                      child: Image.asset(
-                                                        professional.imageUrl!,
+                                          child: professional.imageUrl != null
+                                              ? ClipOval(
+                                                  child: Image.network(
+                                                    professional.imageUrl!,
+                                                    width: 60,
+                                                    height: 60,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context,
+                                                        error, stackTrace) {
+                                                      return Container(
                                                         width: 60,
                                                         height: 60,
-                                                        fit: BoxFit.cover,
-                                                        errorBuilder: (context,
-                                                            error, stackTrace) {
-                                                          return Container(
-                                                            width: 60,
-                                                            height: 60,
-                                                            color: Colors
-                                                                .grey.shade300,
-                                                            child: const Icon(
-                                                                Icons.person,
-                                                                size: 30),
-                                                          );
-                                                        },
-                                                      ).localAsset(),
-                                                    )
-                                                  : const Icon(Icons.person,
-                                                      size: 30),
+                                                        color: Colors
+                                                            .grey.shade300,
+                                                        child: const Icon(
+                                                            Icons.person,
+                                                            size: 30),
+                                                      );
+                                                    },
+                                                  ),
+                                                )
+                                              : const Icon(
+                                                  Icons.person,
+                                                  size: 30,
+                                                ),
                                         ),
                                         const SizedBox(height: 12),
                                         // Name
@@ -391,20 +352,31 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(8),
                                     onTap: selectedProfessionalIndex != null
-                                        ? () {
+                                        ? () async {
                                             final selectedProfessional =
                                                 professionals[
                                                     selectedProfessionalIndex!];
 
                                             // Check if selected professional is available
-                                            final isAvailable =
-                                                selectedProfessional.id != null
-                                                    ? _professionalAvailability[
-                                                            selectedProfessional
-                                                                .id!] ??
-                                                        true
-                                                    : true;
-
+                                            bool isAvailable = true;
+                                            final navData = widget.data() ?? {};
+                                            final selectedServices =
+                                                navData['selectedServices']
+                                                        as List<Service>? ??
+                                                    [];
+                                            final int? serviceId =
+                                                selectedServices.isNotEmpty
+                                                    ? selectedServices.first.id
+                                                    : null;
+                                            if (selectedProfessional.id !=
+                                                    null &&
+                                                serviceId != null) {
+                                              isAvailable =
+                                                  await _checkProfessionalAvailability(
+                                                selectedProfessional.id!,
+                                                serviceId,
+                                              );
+                                            }
                                             if (!isAvailable) {
                                               _showUnavailableMessage(
                                                   selectedProfessional.name ??
@@ -412,11 +384,7 @@ class _SelectProfessionalPageState extends NyPage<SelectProfessionalPage> {
                                               return;
                                             }
 
-                                            final navData = widget.data() ?? {};
-                                            final selectedServices =
-                                                navData['selectedServices']
-                                                        as List<Service>? ??
-                                                    [];
+                                            // Reuse navData & selectedServices
                                             final serviceAddOns = navData[
                                                         'serviceAddOns']
                                                     as Map<int, List<AddOn>>? ??
