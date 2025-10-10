@@ -105,6 +105,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.2"
+  cloud_firestore:
+    dependency: "direct main"
+    description:
+      name: cloud_firestore
+      sha256: af66aeffe5943d582c0f655ec860433dbd773ac4a4ffc62c11960b52a18833fe
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.2"
+  cloud_firestore_platform_interface:
+    dependency: transitive
+    description:
+      name: cloud_firestore_platform_interface
+      sha256: "494dd3d275a0259e3ba08b442b54e64839b0cf58352a50fe97eb67cacf3bad28"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.2"
+  cloud_firestore_web:
+    dependency: transitive
+    description:
+      name: cloud_firestore_web
+      sha256: "85b7b071c23eecbbbb47a9fbd2cfdb1b6af20f2323663fd90234d91a064f0584"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.2"
   collection:
     dependency: transitive
     description:
@@ -249,6 +273,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.9.3+4"
+  firebase_analytics:
+    dependency: "direct main"
+    description:
+      name: firebase_analytics
+      sha256: fce78440ab7b95563054039aac5e342088efed9dc009ac6f81d5cac07155d509
+      url: "https://pub.dev"
+    source: hosted
+    version: "12.0.2"
+  firebase_analytics_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_analytics_platform_interface
+      sha256: "75bdcd2d2635c4cdcd7ec13727527751ddf2f9933e5bf1264a2387920246f3c5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.2"
+  firebase_analytics_web:
+    dependency: transitive
+    description:
+      name: firebase_analytics_web
+      sha256: ed5767695b131cdd425ee6d49934dca80689d9df40609c0d0aa8907ee6f0f785
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.0+2"
   firebase_auth:
     dependency: "direct main"
     description:
@@ -297,6 +345,54 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.1"
+  firebase_messaging:
+    dependency: "direct main"
+    description:
+      name: firebase_messaging
+      sha256: ba12ad0b600e0c939fbb9391e1cd3320a5b5dad5284276b9182fc21eb1e72c2b
+      url: "https://pub.dev"
+    source: hosted
+    version: "16.0.2"
+  firebase_messaging_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_messaging_platform_interface
+      sha256: b4bade67bfc09fcc56eb012b3fc72b59ca9e2259a34cdfb81b368169770ff536
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.7.2"
+  firebase_messaging_web:
+    dependency: transitive
+    description:
+      name: firebase_messaging_web
+      sha256: "8ae4a00d178993feb79603cad324b53696375cbb78805e8eb603fe331866629d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.2"
+  firebase_storage:
+    dependency: "direct main"
+    description:
+      name: firebase_storage
+      sha256: "969e22fe91a2f846755869f82f5cb6872ce06568890059ffba2d5e5373a20077"
+      url: "https://pub.dev"
+    source: hosted
+    version: "13.0.2"
+  firebase_storage_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_storage_platform_interface
+      sha256: "6d1cf75721f614eb0ef44263de83215b9e898bd3c60b5b06e751fefe6c502274"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.2.13"
+  firebase_storage_web:
+    dependency: transitive
+    description:
+      name: firebase_storage_web
+      sha256: "9fa0ed2ec6a973c99dd9e0a57704f12f68e5fc924f9c50f72b793540f19d32ea"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.10.20"
   fixnum:
     dependency: transitive
     description:
@@ -909,6 +1005,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
+  sign_in_with_apple:
+    dependency: "direct main"
+    description:
+      name: sign_in_with_apple
+      sha256: "8bd875c8e8748272749eb6d25b896f768e7e9d60988446d543fe85a37a2392b8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.1"
+  sign_in_with_apple_platform_interface:
+    dependency: transitive
+    description:
+      name: sign_in_with_apple_platform_interface
+      sha256: "981bca52cf3bb9c3ad7ef44aace2d543e5c468bb713fd8dda4275ff76dfa6659"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
+  sign_in_with_apple_web:
+    dependency: transitive
+    description:
+      name: sign_in_with_apple_web
+      sha256: f316400827f52cafcf50d00e1a2e8a0abc534ca1264e856a81c5f06bd5b10fed
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.0"
   simple_gesture_detector:
     dependency: transitive
     description:

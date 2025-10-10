@@ -29,7 +29,12 @@ dependencies:
   country_picker: ^2.0.25
   flutter_svg: ^2.0.9
   firebase_core: ^4.1.1
+  firebase_storage: ^13.0.2
+  firebase_analytics: ^12.0.2
+  firebase_messaging: ^16.0.2
+  sign_in_with_apple: ^7.0.1
   firebase_auth: ^6.1.0
+  cloud_firestore: ^6.0.2
   # google_sign_in: ^6.1.5
   # sign_in_with_apple: ^7.0.1
   pin_code_fields: ^8.0.1
