@@ -719,7 +719,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
     String? emailError;
 
     try {
-      await showModalBottomSheet(
+      final result = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         enableDrag: true,
@@ -729,9 +729,9 @@ class _ReviewPageState extends NyPage<ReviewPage> {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        builder: (context) {
+        builder: (BuildContext modalContext) {
           return StatefulBuilder(
-            builder: (context, setModalState) {
+            builder: (BuildContext context, StateSetter setModalState) {
               void validateAndSave() {
                 // Reset errors
                 nameError = null;
@@ -769,34 +769,11 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                 if (nameError == null &&
                     phoneError == null &&
                     emailError == null) {
-                  // Save the data first
-                  setState(() {
-                    _friendDetails = {
-                      'name': nameController.text.trim(),
-                      'phone': phoneController.text.trim(),
-                      'email': emailController.text.trim(),
-                    };
-                  });
-
-                  // Close modal first, then show toast
-                  Navigator.of(context).pop();
-
-                  // Show success message after modal is closed
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    showToast(
-                      title: "Success",
-                      description: "Friend details saved successfully",
-                      style: ToastNotificationStyleType.success,
-                    );
-                  });
+                  // Close the modal with success result
+                  Navigator.of(modalContext).pop(true);
                 } else {
                   setModalState(() {}); // Refresh modal to show errors
                 }
-              }
-
-              // Handle modal dismissal
-              void handleDismiss() {
-                Navigator.of(context).pop();
               }
 
               return Container(
@@ -825,42 +802,41 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                           ),
                         ),
                       ),
-                      Center(
+                      const Center(
                         child: Text(
                           'Book for a friend',
                           style: TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      SizedBox(height: 24),
-                      Text('Who is booking it?',
+                      const SizedBox(height: 24),
+                      const Text('Who is booking it?',
                           style: TextStyle(fontWeight: FontWeight.w500)),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       TextField(
                         enabled: false,
                         decoration: InputDecoration(
                           labelText: 'Name*',
                           hintText: 'Your name',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                           filled: true,
                           fillColor: Colors.grey.shade100,
                         ),
-                        controller: TextEditingController(
-                            text: 'Cassandra'), // Replace with actual user name
+                        controller: TextEditingController(text: 'Cassandra'),
                       ),
-                      SizedBox(height: 24),
-                      Divider(),
-                      SizedBox(height: 16),
-                      Text('Who are you booking for?',
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                      const Text('Who are you booking for?',
                           style: TextStyle(fontWeight: FontWeight.w500)),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       TextField(
                         controller: nameController,
                         decoration: InputDecoration(
                           labelText: 'Name*',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                           errorText: nameError,
-                          errorBorder: OutlineInputBorder(
+                          errorBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.red),
                           ),
                         ),
@@ -871,15 +847,15 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                           }
                         },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: phoneController,
                         decoration: InputDecoration(
                           labelText: 'Phone number*',
                           prefixText: '+',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                           errorText: phoneError,
-                          errorBorder: OutlineInputBorder(
+                          errorBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.red),
                           ),
                           hintText:
@@ -893,15 +869,15 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                           }
                         },
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       TextField(
                         controller: emailController,
                         decoration: InputDecoration(
                           labelText: 'Email (optional)',
                           hintText: 'example@email.com',
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                           errorText: emailError,
-                          errorBorder: OutlineInputBorder(
+                          errorBorder: const OutlineInputBorder(
                             borderSide: BorderSide(color: Colors.red),
                           ),
                         ),
@@ -913,7 +889,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                           }
                         },
                       ),
-                      SizedBox(height: 24),
+                      const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -925,7 +901,7 @@ class _ReviewPageState extends NyPage<ReviewPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             'Save',
                             style: TextStyle(
                               color: Colors.white,
@@ -943,11 +919,38 @@ class _ReviewPageState extends NyPage<ReviewPage> {
           );
         },
       );
+
+      // Handle the result after modal is closed
+      if (result == true) {
+        // Save the data
+        setState(() {
+          _friendDetails = {
+            'name': nameController.text.trim(),
+            'phone': phoneController.text.trim(),
+            'email': emailController.text.trim(),
+          };
+        });
+
+        // Show success message after a small delay to ensure modal is fully closed
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted) {
+            showToast(
+              title: "Success",
+              description: "Friend details saved successfully",
+              style: ToastNotificationStyleType.success,
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error in friend booking sheet: $e');
     } finally {
-      // Dispose controllers when modal is dismissed
-      nameController.dispose();
-      phoneController.dispose();
-      emailController.dispose();
+      // Dispose controllers after modal is fully closed
+      Future.delayed(const Duration(milliseconds: 100), () {
+        nameController.dispose();
+        phoneController.dispose();
+        emailController.dispose();
+      });
     }
   }
 

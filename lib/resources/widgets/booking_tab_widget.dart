@@ -78,27 +78,26 @@ class _BookingTabState extends NyState<BookingTab>
       // Load bookings using the correct API endpoints
       final futures = await Future.wait([
         BookingService.getBookings(
-            paymentStatus: "fully_paid"), // Open: Full payment completed
-        BookingService.getBookings(
-            paymentStatus: "deposit_paid"), // Pending: Part payment
+            status: "confirmed"), // Open: Full payment completed
+        BookingService.getBookings(status: "pending"), // Pending: Part payment
         BookingService.getBookings(
             status: "completed"), // Completed: Service completed
         BookingService.getBookings(status: "cancelled"), // Cancelled bookings
       ]);
 
       // Filter out cancelled bookings from open appointments (they should be in completed)
-      final openBookings =
-          futures[0].where((booking) => booking.status != 'cancelled').toList();
+      final openBookings = futures[0];
+      // .where((booking) => booking.status == 'confirmed').toList();
 
       // Get cancelled bookings that are fully paid
-      final cancelledFullyPaid = futures[3]
-          .where((booking) =>
-              booking.status == 'cancelled' &&
-              booking.paymentStatus == 'fully_paid')
-          .toList();
+      // final cancelledFullyPaid = futures[3]
+      //     .where((booking) =>
+      //         booking.status == 'cancelled' &&
+      //         booking.paymentStatus == 'fully_paid')
+      //     .toList();
 
       // Combine completed and cancelled fully paid bookings
-      final allCompleted = [...futures[2], ...cancelledFullyPaid];
+      final allCompleted = [...futures[2], ...futures[3]];
 
       setState(() {
         openAppointments = openBookings;
@@ -112,7 +111,7 @@ class _BookingTabState extends NyState<BookingTab>
       print(
           'Loaded ${pendingAppointments.length} pending appointments (deposit_paid)');
       print(
-          'Loaded ${closedAppointments.length} completed/cancelled appointments (${futures[2].length} completed + ${cancelledFullyPaid.length} cancelled fully paid)');
+          'Loaded ${closedAppointments.length} completed/cancelled appointments (${futures[2].length} completed + ${futures[3].length} cancelled fully paid)');
     } catch (e) {
       setState(() {
         error = 'Failed to load bookings: $e';

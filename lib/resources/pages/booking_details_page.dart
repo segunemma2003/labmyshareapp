@@ -160,113 +160,215 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
       );
 
       // Calculate end time based on duration
-      final durationMinutes = booking!.durationMinutes ?? 60; // Default 1 hour
+      final durationMinutes = booking!.durationMinutes ?? 60;
       final endTime = startTime.add(Duration(minutes: durationMinutes));
 
-      // Format dates for calendar URLs
-      final startDateStr = DateFormat('yyyyMMddTHHmmss').format(startTime);
-      final endDateStr = DateFormat('yyyyMMddTHHmmss').format(endTime);
+      print('📅 Start time: $startTime');
+      print('📅 End time: $endTime');
 
-      final title = Uri.encodeComponent(
-          'Beauty Spa Appointment - ${booking!.serviceName ?? 'Service'}');
-      final description = Uri.encodeComponent(_buildCalendarDescription());
-      final location = Uri.encodeComponent('Labs by Shea');
-
-      String calendarUrl;
-
-      if (Platform.isAndroid) {
-        // Google Calendar URL for Android
-        calendarUrl =
-            'https://calendar.google.com/calendar/render?action=TEMPLATE'
-            '&text=$title'
-            '&dates=$startDateStr/$endDateStr'
-            '&details=$description'
-            '&location=$location';
+      if (Platform.isIOS) {
+        await _addToCalendarIOS(startTime, endTime);
       } else {
-        // iOS Calendar URL
-        calendarUrl = 'calshow:'
-            '&title=$title'
-            '&startdate=$startDateStr'
-            '&enddate=$endDateStr'
-            '&notes=$description'
-            '&location=$location';
-      }
-
-      print('📅 Opening calendar URL: $calendarUrl');
-
-      final Uri uri = Uri.parse(calendarUrl);
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-        showToast(
-          title: "Success",
-          description: "Opening calendar with your appointment",
-          style: ToastNotificationStyleType.success,
-        );
-      } else {
-        throw Exception('Could not launch calendar URL');
+        await _addToCalendarAndroid(startTime, endTime);
       }
     } catch (e) {
       print('❌ Error adding to calendar: $e');
-      print('❌ Platform: ${Platform.isAndroid ? 'Android' : 'iOS'}');
-
-      String errorMessage = "Could not open calendar. Please try again.";
-
-      // Platform-specific error messages
-      if (Platform.isAndroid) {
-        errorMessage =
-            "Could not open Android calendar. Please check if you have a calendar app installed.";
-      } else if (Platform.isIOS) {
-        errorMessage =
-            "Could not open iOS calendar. Please check your calendar settings.";
-      }
+      print('❌ Stack trace: ${StackTrace.current}');
 
       showToast(
         title: "Error",
-        description: errorMessage,
+        description: "Could not add to calendar. Please try again.",
         style: ToastNotificationStyleType.danger,
       );
     }
   }
 
-  String _buildCalendarDescription() {
-    if (booking == null) return 'Beauty Spa Appointment';
+  Future<void> _addToCalendarAndroid(
+      DateTime startTime, DateTime endTime) async {
+    try {
+      // Format dates in UTC for proper timezone handling
+      final startDateStr =
+          DateFormat('yyyyMMddTHHmmss').format(startTime.toUtc());
+      final endDateStr = DateFormat('yyyyMMddTHHmmss').format(endTime.toUtc());
 
-    String description = '';
+      final title = Uri.encodeComponent(
+          'Beauty Spa - ${booking!.serviceName ?? 'Appointment'}');
+      final description = Uri.encodeComponent(_buildCalendarDescription());
+      final location = Uri.encodeComponent('Labs by Shea');
 
-    // Professional info
-    if (booking!.professionalName != null) {
-      description += 'Professional: ${booking!.professionalName}\n';
+      print('📅 Creating Android calendar URL...');
+      print('📅 Start: $startDateStr');
+      print('📅 End: $endDateStr');
+
+      // Use Google Calendar universal link (works on Android with any calendar app)
+      final calendarUrl = 'https://www.google.com/calendar/render'
+          '?action=TEMPLATE'
+          '&text=$title'
+          '&dates=${startDateStr}Z/${endDateStr}Z'
+          '&details=$description'
+          '&location=$location'
+          '&sf=true'
+          '&output=xml';
+
+      print('📅 Calendar URL: ${calendarUrl.substring(0, 100)}...');
+
+      final uri = Uri.parse(calendarUrl);
+
+      print('📅 Checking if URL can be launched...');
+
+      if (await canLaunchUrl(uri)) {
+        print('📅 Launching calendar URL...');
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        print('📅 Launch result: $launched');
+
+        if (launched) {
+          showToast(
+            title: "Success",
+            description: "Opening calendar to save your appointment",
+            style: ToastNotificationStyleType.success,
+          );
+        } else {
+          throw Exception('Failed to launch calendar URL');
+        }
+      } else {
+        print('❌ Cannot launch URL');
+        throw Exception('Cannot open calendar app');
+      }
+    } catch (e) {
+      print('❌ Android calendar error: $e');
+      throw Exception(
+          'Could not open calendar app. Please ensure you have a calendar app installed.');
     }
-
-    // Service info
-    if (booking!.serviceName != null) {
-      description += 'Service: ${booking!.serviceName}\n';
-    }
-
-    // Duration
-    if (booking!.durationMinutes != null) {
-      description += 'Duration: ${_formatDuration(booking!.durationMinutes)}\n';
-    }
-
-    // Customer info
-    if (booking!.customerName != null && booking!.customerName!.isNotEmpty) {
-      description += 'Customer: ${booking!.customerName}\n';
-    }
-
-    // Booking reference
-    if (booking!.bookingId != null) {
-      description += 'Booking Ref: ${_formatBookingRef(booking!.bookingId)}\n';
-    }
-
-    // Customer notes
-    if (booking!.customerNotes != null && booking!.customerNotes!.isNotEmpty) {
-      description += 'Notes: ${booking!.customerNotes}';
-    }
-
-    return description;
   }
+
+  Future<void> _addToCalendarIOS(DateTime startTime, DateTime endTime) async {
+    try {
+      // Format dates in UTC for proper timezone handling
+      final startDateStr =
+          DateFormat('yyyyMMddTHHmmss').format(startTime.toUtc());
+      final endDateStr = DateFormat('yyyyMMddTHHmmss').format(endTime.toUtc());
+
+      final title = Uri.encodeComponent(
+          'Beauty Spa - ${booking!.serviceName ?? 'Appointment'}');
+      final description = Uri.encodeComponent(_buildCalendarDescription());
+      final location = Uri.encodeComponent('Labs by Shea');
+
+      print('📅 Creating iOS calendar URL...');
+      print('📅 Start: $startDateStr');
+      print('📅 End: $endDateStr');
+
+      // Use Google Calendar universal link (iOS will offer to open with default calendar app)
+      final calendarUrl = 'https://www.google.com/calendar/render'
+          '?action=TEMPLATE'
+          '&text=$title'
+          '&dates=${startDateStr}Z/${endDateStr}Z'
+          '&details=$description'
+          '&location=$location'
+          '&sf=true'
+          '&output=xml';
+
+      print('📅 Calendar URL: ${calendarUrl.substring(0, 100)}...');
+
+      final uri = Uri.parse(calendarUrl);
+
+      print('📅 Checking if URL can be launched...');
+
+      if (await canLaunchUrl(uri)) {
+        print('📅 Launching calendar URL...');
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+
+        print('📅 Launch result: $launched');
+
+        if (launched) {
+          showToast(
+            title: "Success",
+            description: "Opening calendar to save your appointment",
+            style: ToastNotificationStyleType.success,
+          );
+        } else {
+          throw Exception('Failed to launch calendar URL');
+        }
+      } else {
+        print('❌ Cannot launch URL');
+        throw Exception('Cannot open calendar app');
+      }
+    } catch (e) {
+      print('❌ iOS calendar error: $e');
+      throw Exception('Could not open calendar app. Please try again.');
+    }
+  }
+
+  String _buildCalendarDescription() {
+    final StringBuffer description = StringBuffer();
+
+    description.writeln('Appointment Details:');
+    description.writeln('');
+
+    if (booking?.serviceName != null) {
+      description.writeln('Service: ${booking!.serviceName}');
+    }
+
+    if (booking?.professionalName != null) {
+      description.writeln('Professional: ${booking!.professionalName}');
+    }
+
+    if (booking?.customerNotes != null && booking!.customerNotes!.isNotEmpty) {
+      description.writeln('');
+      description.writeln('Notes: ${booking!.customerNotes}');
+    }
+
+    description.writeln('');
+    description.writeln('Booking ID: ${booking?.bookingId ?? 'N/A'}');
+    description.writeln('');
+    description.writeln('Powered by Labs by Shea');
+
+    return description.toString();
+  }
+
+  // String _buildCalendarDescription() {
+  //   if (booking == null) return 'Beauty Spa Appointment';
+
+  //   String description = '';
+
+  //   // Professional info
+  //   if (booking!.professionalName != null) {
+  //     description += 'Professional: ${booking!.professionalName}\n';
+  //   }
+
+  //   // Service info
+  //   if (booking!.serviceName != null) {
+  //     description += 'Service: ${booking!.serviceName}\n';
+  //   }
+
+  //   // Duration
+  //   if (booking!.durationMinutes != null) {
+  //     description += 'Duration: ${_formatDuration(booking!.durationMinutes)}\n';
+  //   }
+
+  //   // Customer info
+  //   if (booking!.customerName != null && booking!.customerName!.isNotEmpty) {
+  //     description += 'Customer: ${booking!.customerName}\n';
+  //   }
+
+  //   // Booking reference
+  //   if (booking!.bookingId != null) {
+  //     description += 'Booking Ref: ${_formatBookingRef(booking!.bookingId)}\n';
+  //   }
+
+  //   // Customer notes
+  //   if (booking!.customerNotes != null && booking!.customerNotes!.isNotEmpty) {
+  //     description += 'Notes: ${booking!.customerNotes}';
+  //   }
+
+  //   return description;
+  // }
 
   /// Shows platform-specific information about calendar integration
   void _showCalendarInfo() {

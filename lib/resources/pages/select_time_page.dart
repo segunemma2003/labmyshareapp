@@ -287,7 +287,7 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
                           children: [
                             if (p.imageUrl != null)
                               CircleAvatar(
-                                backgroundImage: AssetImage(p.imageUrl!),
+                                backgroundImage: NetworkImage(p.imageUrl!),
                                 radius: 14,
                               ),
                             if (p.imageUrl != null) SizedBox(width: 8),
@@ -408,7 +408,8 @@ class _SelectTimePageState extends NyPage<SelectTimePage> {
         children: [
           if (_selectedProfessional?.profileImageUrl != null)
             CircleAvatar(
-              backgroundImage: NetworkImage(_selectedProfessional!.profileImageUrl!),
+              backgroundImage:
+                  NetworkImage(_selectedProfessional!.profileImageUrl!),
               radius: 32,
             ),
           SizedBox(height: 16),
