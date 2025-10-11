@@ -1076,16 +1076,18 @@ class _BookingDetailsPageState extends NyState<BookingDetailsPage> {
     final isCompleted = booking!.status == 'completed';
     final isCancelled = booking!.status == 'cancelled';
     final isFullyPaid = booking!.paymentStatus == 'fully_paid';
+    final isConfirmed = booking!.status == 'confirmed';
 
     return Column(
       children: [
         // Calendar button (always available)
-        _buildActionButton(
-          icon: Icons.calendar_today,
-          title: 'Add to your Calendar',
-          subtitle: 'Get personal reminders',
-          onTap: _addToCalendar,
-        ),
+        if (isConfirmed)
+          _buildActionButton(
+            icon: Icons.calendar_today,
+            title: 'Add to your Calendar',
+            subtitle: 'Get personal reminders',
+            onTap: _addToCalendar,
+          ),
         const SizedBox(height: 16),
 
         // Status-specific actions

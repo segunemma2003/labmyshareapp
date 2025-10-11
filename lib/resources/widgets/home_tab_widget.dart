@@ -147,45 +147,56 @@ class _HomeTabState extends NyState<HomeTab> {
                             ),
                             SizedBox(width: 8),
                             Expanded(
-                              child: _loadingRegions
-                                  ? Text(
-                                      'Loading...',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    )
-                                  : _errorRegions
-                                      ? Text(
-                                          'Failed to load regions',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.red,
-                                          ),
-                                        )
-                                      : DropdownButton<Region>(
-                                          isExpanded: true,
-                                          value: _selectedRegion,
-                                          icon: Icon(Icons.keyboard_arrow_down,
-                                              size: 16),
-                                          underline: SizedBox(),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black,
-                                          ),
-                                          items: _regions.map((region) {
-                                            return DropdownMenuItem<Region>(
-                                              value: region,
-                                              child: Text(
-                                                region.name ?? '',
-                                                style: TextStyle(fontSize: 14),
-                                              ),
-                                            );
-                                          }).toList(),
-                                          onChanged: (region) =>
-                                              _onRegionChanged(region),
+                                child: _loadingRegions
+                                    ? Text(
+                                        'Loading...',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey,
                                         ),
-                            ),
+                                      )
+                                    : _errorRegions
+                                        ? Text(
+                                            'Failed to load regions',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.red,
+                                            ),
+                                          )
+                                        : Theme(
+                                            data: Theme.of(context).copyWith(
+                                              // This changes the highlight color when hovering/selecting
+                                              hoverColor: Colors.white,
+                                              focusColor: Colors.white,
+                                              // This changes the selected item background
+                                              highlightColor: Colors.white,
+                                            ),
+                                            child: DropdownButton<Region>(
+                                              isExpanded: true,
+                                              value: _selectedRegion,
+                                              icon: Icon(
+                                                  Icons.keyboard_arrow_down,
+                                                  size: 16),
+                                              underline: SizedBox(),
+                                              dropdownColor: Colors
+                                                  .white, // Add this for white background
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black,
+                                              ),
+                                              items: _regions.map((region) {
+                                                return DropdownMenuItem<Region>(
+                                                  value: region,
+                                                  child: Text(
+                                                    region.name ?? '',
+                                                    style:
+                                                        TextStyle(fontSize: 14),
+                                                  ),
+                                                );
+                                              }).toList(),
+                                              onChanged: (region) =>
+                                                  _onRegionChanged(region),
+                                            ))),
                           ],
                         ),
                       ],

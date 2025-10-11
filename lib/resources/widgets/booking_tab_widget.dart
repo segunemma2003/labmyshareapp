@@ -150,17 +150,17 @@ class _BookingTabState extends NyState<BookingTab>
           indicatorColor: Colors.black,
           indicatorWeight: 2,
           labelStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
           unselectedLabelStyle: const TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: FontWeight.normal,
           ),
           tabs: [
             Tab(text: "Open (${openAppointments.length})"),
             Tab(text: "Pending (${pendingAppointments.length})"),
-            Tab(text: "Completed/Cancelled (${closedAppointments.length})"),
+            Tab(text: "Closed (${closedAppointments.length})"),
           ],
         ),
       ),

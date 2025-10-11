@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/resources/pages/chat_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_tawk/flutter_tawk.dart';
 
 class GetHelpPage extends NyStatefulWidget {
   static RouteView path = ("/get-help", (_) => GetHelpPage());
@@ -57,73 +57,7 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
 
   void _openChat() async {
     // Open Tawk.to chat with user identification
-    try {
-      // You can get user data here if needed for chat identification
-      // final user = await AuthService.getCurrentUser();
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => Scaffold(
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back, color: Colors.black87),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              title: Text(
-                "Chat Support",
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            body: Tawk(
-              directChatLink:
-                  'https://embed.tawk.to/687e040399e0301918ab8a7d/1j0m3vbjn',
-              placeholder: Container(
-                color: Colors.white,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFF985F5F)),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        "Loading chat...",
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              onLoad: () {
-                print("Welcome to BeautySpa By Shea Support");
-              },
-              onLinkTap: (url) {
-                print("");
-                // Handle any link taps if needed
-              },
-            ),
-          ),
-        ),
-      );
-    } catch (e) {
-      print("Error opening chat: $e");
-      showToast(
-        title: "Error",
-        description: "Failed to open chat. Please try again.",
-        style: ToastNotificationStyleType.danger,
-      );
-    }
+    routeTo(ChatPage.path);
   }
 
   void _openEmail() async {
@@ -184,11 +118,11 @@ class _GetHelpPageState extends NyPage<GetHelpPage> {
         child: Column(
           children: [
             SizedBox(height: 20),
-            _buildHelpOption(
-              icon: Icons.chat_bubble_outline,
-              title: "Chat",
-              onTap: _openChat,
-            ),
+            // _buildHelpOption(
+            //   icon: Icons.chat_bubble_outline,
+            //   title: "Chat",
+            //   onTap: _openChat,
+            // ),
             _buildHelpOption(
               icon: Icons.email_outlined,
               title: "Email",

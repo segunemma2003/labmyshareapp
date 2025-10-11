@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 class ChatPage extends NyStatefulWidget {
   static RouteView path = ("/chat", (_) => ChatPage());
@@ -7,127 +11,219 @@ class ChatPage extends NyStatefulWidget {
   ChatPage({super.key}) : super(child: () => _ChatPageState());
 }
 
-class _ChatPageState extends NyPage<ChatPage> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+class _ChatPageState extends NyPage<ChatPage> with WidgetsBindingObserver {
+  late WebViewController _controller;
+  bool _isLoading = true;
+  bool _hasError = false;
+  String? _errorMessage;
 
-  List<ChatMessage> messages = [];
+  // Your Tawk.to credentials
+  final String tawkPropertyId = '687e040399e0301918ab8a7d';
+  final String tawkWidgetId = '1j0m3vbjn';
+
+  String get _tawkHTML => '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <title>Chat Support</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body, html {
+                width: 100%;
+                height: 100%;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background-color: #fafafa;
+                overflow: hidden;
+            }
+            #chat-container {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+            }
+            /* Hide Tawk.to branding for cleaner look */
+            .tawk-branding {
+                display: none !important;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="chat-container"></div>
+        
+        <!-- Tawk.to Script -->
+        <script type="text/javascript">
+            var Tawk_API = Tawk_API || {};
+            var Tawk_LoadStart = new Date();
+            
+            Tawk_API.onLoad = function() {
+                console.log('Tawk chat loaded successfully');
+                try {
+                    // Maximize the chat window
+                    Tawk_API.maximize();
+                } catch(e) {
+                    console.error('Error maximizing chat:', e);
+                }
+            };
+            
+            Tawk_API.onChatMaximized = function() {
+                console.log('Chat maximized');
+            };
+            
+            Tawk_API.onChatMinimized = function() {
+                console.log('Chat minimized');
+            };
+            
+            (function(){
+                try {
+                    var s1 = document.createElement("script");
+                    var s0 = document.getElementsByTagName("script")[0];
+                    s1.async = true;
+                    s1.src = 'https://embed.tawk.to/$tawkPropertyId/$tawkWidgetId';
+                    s1.charset = 'UTF-8';
+                    s1.setAttribute('crossorigin','*');
+                    s1.onerror = function() {
+                        console.error('Failed to load Tawk.to script');
+                    };
+                    s0.parentNode.insertBefore(s1, s0);
+                } catch(e) {
+                    console.error('Error loading Tawk.to:', e);
+                }
+            })();
+        </script>
+    </body>
+    </html>
+  ''';
 
   @override
   get init => () {
-        // Initialize with sample messages
-        messages = [
-          ChatMessage(
-            text: "Kevin what songs are hot now?",
-            isMe: false,
-            timestamp: "12:34",
-          ),
-          ChatMessage(
-            text: "You know I dont like music man.",
-            isMe: true,
-            timestamp: "12:35",
-          ),
-          ChatMessage(
-            text:
-                "I'd rather listen to a podcast, watch football, watch a movie, play football, or listen to  podcasts...",
-            isMe: true,
-            timestamp: "12:37",
-          ),
-          ChatMessage(
-            text: "Check this playlist out bro.",
-            isMe: false,
-            timestamp: "12:38",
-          ),
-          ChatMessage(
-            text:
-                "Alright Fam, I'll go watch Anime now.... Madara is whooping some real Hokage butt right now 😂😂",
-            isMe: true,
-            timestamp: "12:52",
-          ),
-          ChatMessage(
-            text:
-                "I knew  you'll love it for sure, I've got to go study now Kevin. I will hit you up later about the party..TTYL 🤙",
-            isMe: false,
-            timestamp: "12:50",
-          ),
-          ChatMessage(
-            text:
-                "Alright Fam, I'll go watch Anime now.... Madara is whooping some real Hokage butt right now 😂😂",
-            isMe: true,
-            timestamp: "12:52",
-          ),
-        ];
+        WidgetsBinding.instance.addObserver(this);
+        _initializeWebView();
       };
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isNotEmpty) {
-      setState(() {
-        messages.add(ChatMessage(
-          text: _messageController.text.trim(),
-          isMe: true,
-          timestamp: _getCurrentTime(),
-        ));
-      });
-      _messageController.clear();
-      _scrollToBottom();
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app lifecycle to prevent background errors
+    if (state == AppLifecycleState.paused) {
+      print('📱 App going to background');
+    } else if (state == AppLifecycleState.resumed) {
+      print('📱 App resumed');
+      // Reload if there was an error
+      if (_hasError) {
+        _reloadChat();
+      }
     }
   }
 
-  String _getCurrentTime() {
-    final now = DateTime.now();
-    return "${now.hour}:${now.minute.toString().padLeft(2, '0')}";
+  void _initializeWebView() {
+    late final PlatformWebViewControllerCreationParams params;
+
+    if (WebViewPlatform.instance is WebKitWebViewPlatform) {
+      // iOS specific configuration
+      params = WebKitWebViewControllerCreationParams(
+        allowsInlineMediaPlayback: true,
+        mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+      );
+    } else if (WebViewPlatform.instance is AndroidWebViewPlatform) {
+      // Android specific configuration
+      params = AndroidWebViewControllerCreationParams();
+    } else {
+      params = const PlatformWebViewControllerCreationParams();
+    }
+
+    _controller = WebViewController.fromPlatformCreationParams(params)
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFFFAFAFA))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            print('📊 Chat loading: $progress%');
+            if (progress == 100) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
+          },
+          onPageStarted: (String url) {
+            print('🌐 Page started loading');
+            setState(() {
+              _isLoading = true;
+              _hasError = false;
+            });
+          },
+          onPageFinished: (String url) async {
+            print('✅ Page finished loading');
+            setState(() {
+              _isLoading = false;
+            });
+
+            // Wait a bit before running JavaScript
+            await Future.delayed(const Duration(milliseconds: 800));
+
+            // Safely inject JavaScript to maximize chat
+            _safeRunJavaScript('''
+              try {
+                if (typeof Tawk_API !== 'undefined' && Tawk_API.maximize) {
+                  Tawk_API.maximize();
+                  console.log('Chat maximized via Flutter');
+                } else {
+                  console.log('Tawk_API not ready yet');
+                  // Try again after a delay
+                  setTimeout(function() {
+                    if (typeof Tawk_API !== 'undefined' && Tawk_API.maximize) {
+                      Tawk_API.maximize();
+                    }
+                  }, 1000);
+                }
+              } catch(e) {
+                console.error('Error maximizing chat:', e);
+              }
+            ''');
+          },
+          onWebResourceError: (WebResourceError error) {
+            print('❌ WebView error: ${error.description}');
+            setState(() {
+              _isLoading = false;
+              _hasError = true;
+              _errorMessage = error.description;
+            });
+          },
+          onNavigationRequest: (NavigationRequest request) {
+            // Allow all navigation for Tawk.to
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..loadHtmlString(_tawkHTML);
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+  void _safeRunJavaScript(String script) {
+    _controller.runJavaScript(script).catchError((error) {
+      print('⚠️ JavaScript execution error: $error');
+      // Don't show error to user, it's not critical
+      return null;
     });
   }
 
-  Widget _buildMessage(ChatMessage message) {
-    return Align(
-      alignment: message.isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-        child: Column(
-          crossAxisAlignment:
-              message.isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: message.isMe ? Colors.black87 : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              child: Text(
-                message.text,
-                style: TextStyle(
-                  color: message.isMe ? Colors.white : Colors.black87,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              message.timestamp,
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _reloadChat() {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = null;
+    });
+    _controller.reload();
   }
 
   @override
@@ -138,120 +234,173 @@ class _ChatPageState extends NyPage<ChatPage> {
         backgroundColor: Colors.white,
         elevation: 1,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.grey.shade300,
-              child: Icon(Icons.person, color: Colors.grey.shade600),
-            ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Support Chat",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+              ),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.grey.shade300,
+                child: Icon(
+                  Icons.support_agent,
+                  color: Colors.grey.shade600,
+                  size: 18,
                 ),
-                Text(
-                  "Online",
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(vertical: 16),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessage(messages[index]);
-              },
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                top: BorderSide(color: Colors.grey.shade200),
               ),
             ),
-            child: SafeArea(
-              child: Row(
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: "Type a message...",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(25),
-                          borderSide: BorderSide(color: Colors.grey.shade300),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
+                  Text(
+                    "Support Chat",
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.send, color: Colors.white),
-                      onPressed: _sendMessage,
+                  Text(
+                    "Online",
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+            onPressed: _reloadChat,
+            tooltip: 'Reload chat',
           ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // WebView
+          if (!_hasError) WebViewWidget(controller: _controller),
+
+          // Loading indicator
+          if (_isLoading && !_hasError)
+            Container(
+              color: Colors.grey.shade50,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
+                      strokeWidth: 3,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Loading chat...",
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Please wait a moment",
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Error state
+          if (_hasError && !_isLoading)
+            Container(
+              color: Colors.grey.shade50,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red.shade300,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Could not load chat',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _errorMessage ??
+                            'Please check your internet connection and try again',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          onPressed: _reloadChat,
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text(
+                            'Try Again',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black87,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isMe;
-  final String timestamp;
-
-  ChatMessage({
-    required this.text,
-    required this.isMe,
-    required this.timestamp,
-  });
 }
